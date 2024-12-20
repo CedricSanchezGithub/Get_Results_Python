@@ -3,7 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.10 (Scrap)" />
   </component>
-  <component name="ProjectRootManager">
-    <output url="file://$PROJECT_DIR$/out" />
-  </component>
+  <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.8 (get_results_python)" project-jdk-type="Python SDK" />
 </project>
