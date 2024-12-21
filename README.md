@@ -32,3 +32,12 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+
+```SQL
+CREATE TABLE results_champ (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    position INT NOT NULL,
+    club_name VARCHAR(255) NOT NULL,
+    points INT NOT NULL
+);
+```
