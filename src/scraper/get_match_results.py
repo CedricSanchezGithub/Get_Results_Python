@@ -2,8 +2,12 @@ import os
 import csv
 from bs4 import BeautifulSoup
 
-def save_match_results(driver, folder, csv_filename, class_name):
+def get_match_results(driver):
     """Récupère les résultats de match à partir d'une classe HTML spécifiée et les enregistre dans un fichier CSV."""
+
+    csv_filename = "results.csv"
+    class_name = "styles_rencontre__9O0P0"
+    folder = "data"
 
     if not os.path.exists(folder):
         os.makedirs(folder)

@@ -1,4 +1,5 @@
 import csv
+
 from src.database.db_drop_option import connection
 
 
@@ -28,21 +29,12 @@ def db_writer_ranking():
         connection.close()
 
 
-import csv
-from src.database.db_drop_option import connection
-
-import csv
-from datetime import datetime
-from src.database.db_drop_option import connection
-
-
-import csv
-from src.database.db_drop_option import connection
 
 def db_writer_results():
     """Insère les données des résultats de match dans la table 'results' de la base de données MySQL."""
     csv_file = "data/results.csv"
 
+    truncate_sql = "TRUNCATE TABLE results;"
     sql = """
     INSERT INTO results (date, team_a, team_b, score_a, score_b, competition)
     VALUES (%s, %s, %s, %s, %s, %s)
@@ -50,6 +42,10 @@ def db_writer_results():
 
     try:
         with connection.cursor() as cursor:
+            # Vider la table avant d'insérer de nouvelles données
+            cursor.execute(truncate_sql)
+            print("Table 'results' vidée avec succès.")
+
             with open(csv_file, newline='', encoding='utf-8') as file:
                 reader = csv.DictReader(file)
                 for row in reader:
