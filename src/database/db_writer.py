@@ -35,23 +35,23 @@ def db_writer_results():
     csv_file = "data/results.csv"
 
     truncate_sql = "TRUNCATE TABLE results;"
-    sql = """
+    insert_sql = """
     INSERT INTO results (date, team_a, team_b, score_a, score_b, competition)
     VALUES (%s, %s, %s, %s, %s, %s)
     """
 
     try:
         with connection.cursor() as cursor:
-            # Vider la table avant d'insérer de nouvelles données
+            # Vider la table avant d'insérer de nouvelles données (uniquement au premier appel)
             cursor.execute(truncate_sql)
             print("Table 'results' vidée avec succès.")
 
+            # Lire et insérer les nouvelles données
             with open(csv_file, newline='', encoding='utf-8') as file:
                 reader = csv.DictReader(file)
                 for row in reader:
-                    # Insertion directe de la date en tant que string
-                    cursor.execute(sql, (
-                        row['date_time'],         # Directement inséré sans conversion
+                    cursor.execute(insert_sql, (
+                        row['date_time'],         # Correspond à 'date'
                         row['team_1_name'],       # Correspond à 'team_a'
                         row['team_2_name'],       # Correspond à 'team_b'
                         int(row['team_1_score']), # Correspond à 'score_a'
@@ -65,6 +65,3 @@ def db_writer_results():
 
     except Exception as e:
         print(f"Erreur lors de l'insertion dans 'results' : {e}")
-
-    finally:
-        connection.close()

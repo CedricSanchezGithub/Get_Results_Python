@@ -1,10 +1,8 @@
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
-from src.database.db_writer import db_writer_results
-from src.scraper.get_content import get_content
-from src.scraper.get_match_results import save_match_results
+from src.database.db_drop_option import connection
+from src.scraper.get_all import get_all
 
 # Configuration de Chrome en mode headless
 chrome_options = Options()
@@ -20,21 +18,15 @@ driver = webdriver.Chrome(options=chrome_options)
 # Navigation vers l'URL cible
 driver.get("https://www.ffhandball.fr/competitions/saison-2024-2025-20/regional/16-ans-f-territorial-25610/poule-150409/journee-1")
 
-#cookies(driver)
-#time.sleep(2)
-#navigation(driver)
-
-
-
-save_match_results(
-    driver,
-    folder="data",
-    csv_filename="results.csv",
-    class_name="styles_rencontre__9O0P0"
-)
-
-db_writer_results()
+if __name__ == "__main__":
+    try:
+        get_all(driver)
+    finally:
+        connection.close()
+        print("Connexion MySQL fermée.")
 
 # Fermeture du driver
 driver.close()
+
+
 

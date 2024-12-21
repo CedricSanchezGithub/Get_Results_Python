@@ -3,8 +3,13 @@ import csv
 import json
 from bs4 import BeautifulSoup
 
-def get_rank(driver, folder, html_filename, csv_filename, is_csv=False, is_html=False):
+def get_rank(driver, is_csv=False, is_html=False):
     """Récupère le contenu de la balise <tbody> et l'enregistre dans un fichier HTML, CSV, et JSON dans un dossier."""
+
+    folder = "data"
+    html_filename = "ranking.html"
+    csv_filename = "ranking.csv"
+
     # Créer le dossier s'il n'existe pas
     if not os.path.exists(folder):
         os.makedirs(folder)
