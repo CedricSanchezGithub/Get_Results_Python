@@ -1,4 +1,4 @@
-from db_connector import get_connection
+from src.database.db_connector import get_connection
 
 
 def list_tables():

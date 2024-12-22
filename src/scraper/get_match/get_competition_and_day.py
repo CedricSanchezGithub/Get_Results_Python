@@ -1,9 +1,9 @@
 import os
-import csv
+import pandas as pd
 import time
 
 
-def extract_info_from_url(url):
+def get_day_and_competition(url):
     """
     Extrait les informations de l'URL et les enregistre dans un fichier CSV.
     """
@@ -42,20 +42,27 @@ def get_day_via_url(url):
     return journee
 
 
-
 def save_to_csv(csv_filepath, competition, journee):
     """
-    Enregistre les informations dans un fichier CSV.
-    Supprime et recrée le fichier si reset=True.
+    Enregistre les informations dans un fichier CSV avec pandas.
+    Ajoute les nouvelles données sans écraser celles existantes.
     """
+    # Créer un DataFrame pour les nouvelles données
+    new_data = pd.DataFrame([{"competition": competition, "journee": journee}])
 
     if os.path.isfile(csv_filepath):
-        os.remove(csv_filepath)
-        print(f"Fichier CSV supprimé : {csv_filepath}")
+        # Charger les données existantes
+        existing_data = pd.read_csv(csv_filepath)
 
-    with open(csv_filepath, mode="a", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(["competition", "journee"])
-        writer.writerow([competition, journee])
+        # Combiner les nouvelles données avec les existantes
+        combined_data = pd.concat([existing_data, new_data])
 
+        # Supprimer les doublons éventuels
+        combined_data.drop_duplicates(inplace=True)
+    else:
+        # Si le fichier n'existe pas, les nouvelles données sont les seules présentes
+        combined_data = new_data
+
+    # Sauvegarder les données combinées
+    combined_data.to_csv(csv_filepath, index=False)
     print(f"Informations enregistrées : {competition}, {journee} dans {csv_filepath}")
