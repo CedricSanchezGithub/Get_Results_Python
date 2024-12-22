@@ -1,10 +1,14 @@
 import os
-import csv
-import json
+
 from bs4 import BeautifulSoup
 
-def get_content(driver, folder, html_filename, csv_filename, json_filename, tag_name=None, class_name=None, id_name=None):
-    """Récupère le contenu d'une balise ou d'une classe HTML spécifiée et l'enregistre dans un fichier HTML, CSV, et JSON dans un dossier spécifié."""
+folder = "data"
+html_filename = "get_content.html"
+
+def get_content(driver, tag_name=None):
+    """Récupère le contenu d'une balise ou d'une classe HTML spécifiée et l'enregistre dans un fichier HTML,
+     dans un dossier spécifié."""
+
     # Créer le dossier s'il n'existe pas
     if not os.path.exists(folder):
         os.makedirs(folder)

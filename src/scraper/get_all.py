@@ -1,10 +1,10 @@
 import time
 
-from src.database.db_drop_option import connection
 from src.database.db_writer import db_writer_results
 from src.navigation.cookies import cookies
 from src.navigation.navigation import navigation
-from src.scraper.get_match_results import get_match_results
+from src.scraper.get_match.extract_info_from_url import extract_info_from_url
+from src.scraper.get_match.get_match_results import get_match_results
 from src.scraper.get_rank import get_rank
 
 
@@ -20,6 +20,7 @@ def get_all(driver):
     time.sleep(2)
     cookies(driver)
     get_rank(driver, is_csv=True)
+    extract_info_from_url(driver.current_url)
 
     while True:
 

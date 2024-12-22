@@ -2,6 +2,7 @@ import os
 import csv
 from bs4 import BeautifulSoup
 
+
 def get_match_results(driver):
     """Récupère les résultats de match à partir d'une classe HTML spécifiée et les enregistre dans un fichier CSV."""
 
@@ -48,7 +49,9 @@ def get_match_results(driver):
             continue
 
     with open(csv_filepath, "w", newline="", encoding="utf-8") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=["date_time", "team_1_name", "team_1_score", "team_2_name", "team_2_score", "match_link"])
+        writer = csv.DictWriter(csv_file,
+                                fieldnames=["date_time", "team_1_name", "team_1_score", "team_2_name", "team_2_score",
+                                            "match_link"])
         writer.writeheader()
         writer.writerows(data)
     print(f"Données sauvegardées dans le fichier CSV : {csv_filepath}")

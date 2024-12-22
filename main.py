@@ -3,6 +3,7 @@ from selenium.webdriver.chrome.options import Options
 
 from src.database.db_drop_option import connection
 from src.scraper.get_all import get_all
+from src.scraper.get_match.extract_info_from_url import extract_info_from_url
 
 # Configuration de Chrome en mode headless
 chrome_options = Options()
@@ -20,7 +21,8 @@ driver.get("https://www.ffhandball.fr/competitions/saison-2024-2025-20/regional/
 
 if __name__ == "__main__":
     try:
-        get_all(driver)
+        #get_all(driver)
+        extract_info_from_url(driver.current_url)
     finally:
         connection.close()
         print("Connexion MySQL fermée.")
