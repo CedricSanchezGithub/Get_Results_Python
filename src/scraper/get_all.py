@@ -26,10 +26,10 @@ def get_all(driver):
 
     while True:
         get_match_results(driver)
-        db_writer_results()
         i += 1
         print(f"Page {i}")
         # Passe à la journée suivante et vérifie s'il reste des pages
         if not navigation(driver):
             print("Toutes les journées ont été traitées.")
             break
+    db_writer_results()

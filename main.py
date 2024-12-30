@@ -3,13 +3,14 @@ from selenium.webdriver.chrome.options import Options
 
 from src.database.db_drop_option import connection
 from src.scraper.get_all import get_all
+from src.scraper.get_content import get_content
 
 # Configuration de Chrome en mode headless
 chrome_options = Options()
 chrome_options.add_argument("--headless")  # Exécute Chrome sans interface graphique
 chrome_options.add_argument("--no-sandbox")  # Nécessaire pour Docker
 chrome_options.add_argument("--disable-dev-shm-usage")  # Réduit les risques de plantage dans Docker
-chrome_options.add_argument("--disable-gpu")  # Améliore la compatibilité sur certaines machines
+chrome_options.add_argument("--disable-gpu")  # Optionnel, améliore la compatibilité sur certaines machines
 chrome_options.add_argument("--window-size=1920x1080")
 
 # Initialisation du driver avec les options
@@ -21,6 +22,7 @@ driver.get("https://www.ffhandball.fr/competitions/saison-2024-2025-20/regional/
 if __name__ == "__main__":
     try:
         get_all(driver)
+        # get_content(driver, "tbody")
     finally:
         connection.close()
         print("Connexion MySQL fermée.")

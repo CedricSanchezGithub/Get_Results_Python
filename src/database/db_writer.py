@@ -26,42 +26,28 @@ def db_writer_ranking():
         print(f"Erreur lors de l'insertion dans 'ranking' : {e}")
 
 
+import csv
+from src.database.db_drop_option import connection
+
 
 def db_writer_results():
     """Insère les données des résultats de match dans la table 'results' de la base de données MySQL."""
     results_csv = "data/results.csv"
-    day_and_competition_csv = "data/day_and_competition.csv"
 
+    # Requête SQL simplifiée
     insert_sql = """
-    INSERT INTO results (date, team_1_name,team_1_score, team_2_name, team_2_score, match_link, competition, day)
+    INSERT INTO results (date, team_1_name, team_1_score, team_2_name, team_2_score, match_link, competition, day)
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
 
     try:
         with connection.cursor() as cursor:
-            # Lire les deux fichiers CSV
-            with open(day_and_competition_csv, newline='', encoding='utf-8') as day_comp_file, \
-                 open(results_csv, newline='', encoding='utf-8') as results_file:
-                day_comp_reader = list(csv.DictReader(day_comp_file))
-                results_reader = csv.DictReader(results_file)
+            with open(results_csv, newline='', encoding='utf-8') as results_file:
+                reader = csv.DictReader(results_file)
 
-                for idx, row in enumerate(results_reader):
-                    # Récupérer les données competition et journee
-                    if idx < len(day_comp_reader):
-                        day_comp_row = day_comp_reader[idx]
-                        competition = day_comp_row.get('competition', None)
-                        day = day_comp_row.get('journee', None)
-                    else:
-                        competition = None
-                        day = None
-
-                    # Valider les données avant insertion
-                    if not all([row.get('date'), row.get('team_1_name'), row.get('team_1_score'), row.get('team_2_name'), row.get('team_2_score'), row.get('match_link')]):
-                        print(f"Ligne invalide ignorée : {row}")
-                        continue
-
-                    # Insérer les données dans la base
+                for row in reader:
                     try:
+                        # Insertion des données après conversion des scores en entiers
                         cursor.execute(insert_sql, (
                             row['date'],
                             row['team_1_name'],
@@ -69,15 +55,14 @@ def db_writer_results():
                             row['team_2_name'],
                             int(row['team_2_score']),
                             row['match_link'],
-                            competition,
-                            day
+                            row['competition'],
+                            row['journee']
                         ))
                     except Exception as e:
                         print(f"Erreur lors de l'insertion pour la ligne {row} : {e}")
-                        continue
 
             connection.commit()
-            print(f"Données insérées avec succès depuis {results_csv} et {day_and_competition_csv}")
+            print(f"Données insérées avec succès depuis {results_csv}")
 
     except Exception as e:
         print(f"Erreur lors de l'insertion dans 'results' : {e}")

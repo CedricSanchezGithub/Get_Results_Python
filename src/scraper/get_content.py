@@ -2,6 +2,8 @@ import os
 
 from bs4 import BeautifulSoup
 
+from src.database.db_drop_option import connection
+
 folder = "data"
 html_filename = "get_content.html"
 
@@ -30,3 +32,5 @@ def get_content(driver, tag_name=None):
         with open(html_filepath, "w", encoding="utf-8") as file:
             file.write(str(content))
         print(f"Contenu de <{tag_name}> sauvegardé dans le fichier : {html_filepath}")
+
+

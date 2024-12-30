@@ -7,6 +7,5 @@ def cookies(driver):
     if button_accepte_cookies:
         time.sleep(3)
         button_accepte_cookies[0].click()
-        print("Bannière de cookies acceptée.")
     else:
         print("Bannière de cookies inexistante.")

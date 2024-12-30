@@ -5,6 +5,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from src.scraper.get_match.get_competition_and_day import get_competition_via_url, get_day_via_url
+from src.scraper.get_match.save_data_csv import save_data
 
 
 def get_match_results(driver):
@@ -26,7 +27,7 @@ def get_match_results(driver):
     # Extraire les informations competition et journee depuis l'URL
     competition = get_competition_via_url(driver)
     time.sleep(2)
-    journee = get_day_via_url(driver)
+    day = get_day_via_url(driver)
 
     # Vérifier si la classe est spécifiée
     if not class_name:
@@ -39,8 +40,10 @@ def get_match_results(driver):
         print(f"Aucune balise avec la classe '{class_name}' trouvée.")
         return
 
+    # DataFrame global pour accumuler toutes les données
+    all_data = pd.DataFrame()
+
     # Collecte des données de la page actuelle
-    data = []
     for match in content:
         try:
             date = match.find("p", class_="block_date__dYMQX").text.strip()
@@ -51,7 +54,7 @@ def get_match_results(driver):
             match_link = match["href"]
 
             # Ajouter les données competition et journee à chaque match
-            data.append({
+            all_data = pd.concat([all_data, pd.DataFrame([{
                 "date": date,
                 "team_1_name": team_1_name,
                 "team_1_score": team_1_score,
@@ -59,27 +62,14 @@ def get_match_results(driver):
                 "team_2_score": team_2_score,
                 "match_link": match_link,
                 "competition": competition,
-                "journee": journee
-            })
+                "journee": day
+            }])], ignore_index=True)
         except AttributeError:
             print("Un des éléments de match est manquant, passage au suivant.")
             continue
 
-    # Convertir les données collectées en DataFrame pandas
-    new_data = pd.DataFrame(data)
-
-    # Charger les données existantes si le fichier CSV existe
-    if os.path.exists(csv_filepath):
-        existing_data = pd.read_csv(csv_filepath)
-
-        # Combiner les anciennes et nouvelles données
-        combined_data = pd.concat([existing_data, new_data])
-
-        # Supprimer les doublons éventuels
-        combined_data.drop_duplicates(inplace=True)
-    else:
-        combined_data = new_data
+    # Afficher le DataFrame global à la fin
+    print(all_data)
 
     # Sauvegarder les données combinées dans le fichier CSV
-    combined_data.to_csv(csv_filepath, index=False)
-    print(f"Données sauvegardées dans le fichier CSV : {csv_filepath}")
+    save_data(csv_filepath, all_data)
