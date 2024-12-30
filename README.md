@@ -34,10 +34,24 @@ python main.py
 ```
 
 ```SQL
-CREATE TABLE results_champ (
+DROP TABLE results;
+CREATE TABLE results (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    date VARCHAR(255) NOT NULL,      -- Correspond à 'date' dans le CSV
+    team_1_name VARCHAR(255) NOT NULL,     -- Correspond à 'team_1_name'
+    team_1_score INT NOT NULL,             -- Correspond à 'team_1_score'
+    team_2_name VARCHAR(255) NOT NULL,     -- Correspond à 'team_2_name'
+    team_2_score INT NOT NULL,             -- Correspond à 'team_2_score'
+    match_link VARCHAR(255),          -- Correspond à 'match_link'
+    competition VARCHAR(255),         -- Correspond à 'competition'
+    day VARCHAR(255)                  -- Correspond à 'journee'
+);
+
+CREATE TABLE ranking (
     id INT AUTO_INCREMENT PRIMARY KEY,
     position INT NOT NULL,
     club_name VARCHAR(255) NOT NULL,
     points INT NOT NULL
 );
+
 ```
