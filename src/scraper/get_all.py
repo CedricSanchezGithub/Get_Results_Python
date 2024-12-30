@@ -1,10 +1,9 @@
 import time
 
 from src.database.db_drop import truncate_table
-from src.database.db_writer import db_writer_results
+from src.database.db_writer import db_writer_results, db_writer_ranking
 from src.navigation.cookies import cookies
 from src.navigation.navigation import navigation
-from src.scraper.get_match.get_competition_and_day import get_day_and_competition
 from src.scraper.get_match.get_match_results import get_match_results
 from src.scraper.get_rank import get_rank
 
@@ -19,14 +18,14 @@ def get_all(driver):
     """
     i = 1
     time.sleep(2)
-    cookies(driver)
-    get_rank(driver, is_csv=True)
-    get_day_and_competition(driver.current_url)
     truncate_table("results")
     truncate_table("ranking")
+    cookies(driver)
+    get_rank(driver, is_csv=True)
+    db_writer_ranking()
 
     while True:
-        get_match_results(driver, driver.current_url)
+        get_match_results(driver)
         db_writer_results()
         i += 1
         print(f"Page {i}")

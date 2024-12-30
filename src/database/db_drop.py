@@ -9,7 +9,7 @@ def list_tables():
             cursor.execute("SHOW TABLES;")
             return [table[0] for table in cursor.fetchall()]
     finally:
-        connection.close()
+        print("voici la liste des tables")
 
 
 def truncate_table(table_name):
@@ -20,7 +20,7 @@ def truncate_table(table_name):
             cursor.execute(f"TRUNCATE TABLE {table_name};")
             print(f"Table '{table_name}' vidée avec succès.")
     finally:
-        connection.close()
+        print("terminé")
 
 
 if __name__ == "__main__":

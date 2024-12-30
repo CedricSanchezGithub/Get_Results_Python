@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from src.scraper.get_match.get_competition_and_day import get_competition_via_url, get_day_via_url
 
 
-def get_match_results(driver, url):
+def get_match_results(driver):
     """
     Récupère les résultats de match et les informations de l'URL, puis les enregistre dans un fichier CSV unique.
     """
@@ -24,9 +24,9 @@ def get_match_results(driver, url):
     soup = BeautifulSoup(html_content, "html.parser")
 
     # Extraire les informations competition et journee depuis l'URL
-    competition = get_competition_via_url(url)
+    competition = get_competition_via_url(driver)
     time.sleep(2)
-    journee = get_day_via_url(url)
+    journee = get_day_via_url(driver)
 
     # Vérifier si la classe est spécifiée
     if not class_name:
@@ -43,7 +43,7 @@ def get_match_results(driver, url):
     data = []
     for match in content:
         try:
-            date_time = match.find("p", class_="block_date__dYMQX").text.strip()
+            date = match.find("p", class_="block_date__dYMQX").text.strip()
             team_1_name = match.find("div", class_="styles_teamName__aH4Gu styles_left__svLY+").text.strip()
             team_1_score = match.find("div", class_="styles_score__ELPXO styles_winner__LkkrE").text.strip()
             team_2_name = match.find("div", class_="styles_teamName__aH4Gu styles_right__wdfIf").text.strip()
@@ -52,14 +52,14 @@ def get_match_results(driver, url):
 
             # Ajouter les données competition et journee à chaque match
             data.append({
-                "date_time": date_time,
+                "date": date,
                 "team_1_name": team_1_name,
                 "team_1_score": team_1_score,
                 "team_2_name": team_2_name,
                 "team_2_score": team_2_score,
                 "match_link": match_link,
-                "competition": competition,  # Ajout de competition
-                "journee": journee           # Ajout de journee
+                "competition": competition,
+                "journee": journee
             })
         except AttributeError:
             print("Un des éléments de match est manquant, passage au suivant.")

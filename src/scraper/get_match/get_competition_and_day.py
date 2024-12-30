@@ -3,43 +3,46 @@ import pandas as pd
 import time
 
 
-def get_day_and_competition(url):
-    """
-    Extrait les informations de l'URL et les enregistre dans un fichier CSV.
-    """
-    # Extraire les informations
-    competition = get_competition_via_url(url)
-    time.sleep(2)
-    journee = get_day_via_url(url)
+# def get_day_and_competition(driver):
+#     """
+#     Extrait les informations de l'URL et les enregistre dans un fichier CSV.
+#     """
+#     # Extraire les informations
+#     competition = get_competition_via_url(driver)
+#     time.sleep(2)
+#     journee = get_day_via_url(driver)
+#
+#     # Préparer le dossier et le fichier
+#     folder = "data"
+#     csv_filename = "day_and_competition.csv"
+#     os.makedirs(folder, exist_ok=True)
+#     csv_filepath = os.path.join(folder, csv_filename)
+#
+#     # Enregistrer dans le CSV
+#     save_to_csv(csv_filepath, competition, journee)
 
-    # Préparer le dossier et le fichier
-    folder = "data"
-    csv_filename = "day_and_competition.csv"
-    os.makedirs(folder, exist_ok=True)
-    csv_filepath = os.path.join(folder, csv_filename)
 
-    # Enregistrer dans le CSV
-    save_to_csv(csv_filepath, competition, journee)
-
-
-def get_competition_via_url(url):
+def get_competition_via_url(driver):
     """
-    Extrait la compétition de l'URL en découpant la chaîne.
+    Extrait la compétition de l'URL actuelle du navigateur Selenium.
     """
-    print("Extracting competition ")
+    url = driver.current_url  # Récupère l'URL actuelle via Selenium
+    print("Extracting competition from URL")
     parts = url.split('/')
-    competition = parts[-4]
+    competition = parts[-4]  # Adapte la position en fonction de l'URL réelle
     return competition
 
 
-def get_day_via_url(url):
+def get_day_via_url(driver):
     """
-    Extrait la journée de l'URL en découpant la chaîne.
+    Extrait la journée de l'URL actuelle du navigateur Selenium.
     """
-    print("Extracting journee de l'URL ")
+    url = driver.current_url  # Récupère l'URL actuelle via Selenium
+    print("Extracting journee from URL")
     parts = url.split('/')
-    journee = parts[-2]
+    journee = parts[-2]  # Adapte la position en fonction de l'URL réelle
     return journee
+
 
 
 def save_to_csv(csv_filepath, competition, journee):
