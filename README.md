@@ -4,7 +4,7 @@
 
 ```bash
 /scraping_project
-├── /scraper            # Logique de scraping
+├── /scraping            # Logique de scraping
 │   ├── fetcher.py      # Téléchargement des pages HTML
 │   ├── parser.py       # Extraction des données à partir du HTML
 │   └── scheduler.py    # Programmation des exécutions périodiques

@@ -2,14 +2,13 @@ import os
 
 from bs4 import BeautifulSoup
 
-from src.database.db_drop_option import connection
-
 folder = "data"
-html_filename = "get_content.html"
 
-def get_content(driver, tag_name=None):
+def get_content(driver, category, tag_name=None ):
     """Récupère le contenu d'une balise ou d'une classe HTML spécifiée et l'enregistre dans un fichier HTML,
      dans un dossier spécifié."""
+
+    html_filename = f"get_content_{category}.html"
 
     # Créer le dossier s'il n'existe pas
     if not os.path.exists(folder):

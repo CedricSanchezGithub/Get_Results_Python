@@ -1,14 +1,14 @@
 import csv
 
-from src.database.db_drop_option import connection
+from src.utils.purge.tables_drop.db_drop_option import connection
 
 
-def db_writer_ranking():
+def db_writer_ranking(category):
     """Insère les données de classement dans la base de données MySQL."""
     csv_file = "data/ranking.csv"
-
-    sql = """
-    INSERT INTO ranking (position, club_name, points)
+    table_name = f"results_{category}"
+    sql = f"""
+    INSERT INTO {table_name} (position, club_name, points)
     VALUES (%s, %s, %s)
     """
 
@@ -26,17 +26,15 @@ def db_writer_ranking():
         print(f"Erreur lors de l'insertion dans 'ranking' : {e}")
 
 
-import csv
-from src.database.db_drop_option import connection
 
 
-def db_writer_results():
+def db_writer_results(category):
     """Insère les données des résultats de match dans la table 'results' de la base de données MySQL."""
-    results_csv = "data/results.csv"
-
+    results_csv = f"data/results_{category}.csv"
+    table_name = f"`results_{category}`"
     # Requête SQL simplifiée
-    insert_sql = """
-    INSERT INTO results (date, team_1_name, team_1_score, team_2_name, team_2_score, match_link, competition, day)
+    insert_sql = f"""
+    INSERT INTO {table_name} (date_string, team_1_name, team_1_score, team_2_name, team_2_score, match_link, competition, day)
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
     """
 
@@ -49,11 +47,11 @@ def db_writer_results():
                     try:
                         # Insertion des données après conversion des scores en entiers
                         cursor.execute(insert_sql, (
-                            row['date'],
+                            row['date_string'],
                             row['team_1_name'],
-                            int(row['team_1_score']),
+                            row['team_1_score'],
                             row['team_2_name'],
-                            int(row['team_2_score']),
+                            row['team_2_score'],
                             row['match_link'],
                             row['competition'],
                             row['journee']
