@@ -1,15 +1,18 @@
+import locale
 import os
+from datetime import datetime
 
 import pandas as pd
 from bs4 import BeautifulSoup
+from pandas.io.formats import string
 
 from src.scraping.get_competition_and_day import get_day_via_url, get_competition_via_url
 from src.saving.save_data_csv import save_data
 
 
-def get_match_results(driver, category):
+def get_pool_results(driver, category):
 
-    csv_filename = f"results_{category}.csv"
+    csv_filename = f"pool_{category}.csv"
     folder = "data"
     os.makedirs(folder, exist_ok=True)
     csv_filepath = os.path.join(folder, csv_filename)
@@ -25,8 +28,6 @@ def get_match_results(driver, category):
 
     match_data = []
 
-    print(f"main_containers : {main_containers}")
-
     for container in main_containers:
         try:
             date_container = container.find("p", class_="block_date__dYMQX")
@@ -36,7 +37,7 @@ def get_match_results(driver, category):
             match_link = container.get("href", None)
 
             match_data.append({
-                "date_string": date_string,
+                "date_string": parse_date_to_milliseconds(date_string),
                 "team_1_name": team_left_name,
                 "team_1_score": team_left_score,
                 "team_2_name": team_right_name,
@@ -76,3 +77,27 @@ def extract_team_data(container, side_class):
     )
 
     return team_name, team_score
+
+
+def parse_date_to_milliseconds(date_string):
+
+    if date_string is not string:
+        print("Date invalide ou vide")
+        return 0
+
+    # Définir la locale pour reconnaître les noms de jours et mois en français
+    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+
+    # Remplacer "à" et "H" pour faciliter le parsing
+    date_string = date_string.replace(" à ", " ").replace("H", ":")
+
+    # Parser la date
+    date_format = "%A %d %B %Y %H:%M"
+    try:
+        dt = datetime.strptime(date_string, date_format)
+        # Convertir en timestamp en millisecondes
+        timestamp_ms = int(dt.timestamp() * 1000)
+        return timestamp_ms
+    except ValueError as e:
+        print(f"Erreur lors du parsing de la date : {e}")
+        return None

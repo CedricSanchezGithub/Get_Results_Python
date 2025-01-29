@@ -4,5 +4,5 @@ from src.utils.purge.tables_drop.db_drop import truncate_table
 
 def purge_data(category):
     purge_csv(category)
-    truncate_table(f"results_{category}")
+    truncate_table(f"pool_{category}")
     # truncate_table(f"ranking_{category}")

@@ -34,8 +34,8 @@ python main.py
 ```
 
 ```SQL
-DROP TABLE results;
-CREATE TABLE results (
+DROP TABLE pool;
+CREATE TABLE pool (
     id INT AUTO_INCREMENT PRIMARY KEY,
     date VARCHAR(255) NOT NULL,      
     team_1_name VARCHAR(255) NOT NULL,     

@@ -4,8 +4,8 @@ drop_sql_ranking = """
 DROP TABLE IF EXISTS ranking;
 """
 
-drop_sql_results = """
-DROP TABLE IF EXISTS results;
+drop_sql_pool = """
+DROP TABLE IF EXISTS pool;
 """
 
 connection = get_connection()
@@ -17,6 +17,6 @@ def drop_tables_ranking():
 
 def drop_tables_results():
     with connection.cursor() as cursor:
-        cursor.execute(drop_sql_results)
-        print("Table 'results' dropped")
+        cursor.execute(drop_sql_pool)
+        print("Table 'pool' dropped")
 

@@ -3,7 +3,8 @@ import time
 from src.navigation.cookies import cookies
 from src.navigation.navigation import navigation
 from src.saving.db_writer import db_writer_results
-from src.scraping.get_match_results import get_match_results
+from src.scraping.get_match_results import get_pool_results
+from src.utils.purge.tables_drop.db_drop import create_table
 
 
 def end_of_navigation():
@@ -22,10 +23,11 @@ def get_all(driver, category):
     # db_writer_ranking(category)
 
     while True:
-        get_match_results(driver, category)
+        get_pool_results(driver, category)
         i += 1
         print(f"Page {i}")
         if not navigation(driver):
             print("Toutes les journées ont été traitées.")
             break
+    create_table(f"pool_{category}")
     db_writer_results(category)
