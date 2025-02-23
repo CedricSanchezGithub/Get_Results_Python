@@ -3,19 +3,34 @@
 ## Description
 
 ```bash
-/scraping_project
-├── /scraping            # Logique de scraping
-│   ├── fetcher.py      # Téléchargement des pages HTML
-│   ├── parser.py       # Extraction des données à partir du HTML
-│   └── scheduler.py    # Programmation des exécutions périodiques
-├── /database           # Gestion de la base de données
-│   ├── db_connector.py # Connexion à la base de données
-│   └── db_writer.py    # Insertion des données dans la base
-├── /utils              # Utilitaires généraux
-│   └── logger.py       # Gestion des logs
-├── /tests              # Tests unitaires pour vérifier les modules
-│   └── test_scraper.py # Tests du fetcher, parser, etc.
-└── main.py             # Point d'entrée principal
+get_results_python [Scrap]
+├── .venv
+├── data
+│   └── database
+├── src
+│   ├── database
+│   │   └── db_connector.py
+│   ├── navigation
+│   │   ├── cookies.py
+│   │   └── navigation.py
+│   ├── saving
+│   │   ├── db_writer.py
+│   │   └── save_data_csv.py
+│   ├── scraping
+│   │   ├── get_all.py
+│   │   ├── get_compet_data.py
+│   │   ├── get_match_results.py
+│   │   └── get_rank.py
+│   └── utils
+│       ├── purge
+│       │   ├── db_drop.py
+│       │   └── tables_drop.py
+│       └── db_drop_option.py
+├── docker-compose.yml
+├── main.py
+├── notes.txt
+├── README.md
+└── requirements.txt
 ```
 
 ```bash
@@ -55,3 +70,5 @@ CREATE TABLE ranking (
 );
 
 ```
+
+http://localhost:5000/scrape

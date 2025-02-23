@@ -8,7 +8,6 @@ from src.utils.purge_data import purge_data
 from src.utils.purge.tables_drop.db_drop_option import connection
 from src.utils.sources.urls import urls
 
-# Configuration de Chrome en mode headless
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
@@ -16,8 +15,7 @@ chrome_options.add_argument("--disable-dev-shm-usage")
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--window-size=1920x1080")
 
-if __name__ == "__main__":
-
+def run_daily_scraping():
     start_time = time.time()
     driver = webdriver.Chrome(options=chrome_options)
 
