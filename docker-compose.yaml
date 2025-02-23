@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   mysql:
     image: mysql:8.0.33-oracle
@@ -27,6 +29,31 @@ services:
       PMA_PASSWORD: root
     ports:
       - "8080:80"
+
+  python_scraper:
+    image: cedsanc/python-scraper-getresults:latest
+    container_name: python-scraper-getresults
+    depends_on:
+      - mysql
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: mysql-container-getresults
+      DB_USER: app_user
+      DB_PASSWORD: app_password
+      DB_NAME: getresults
+
+  spring_api:
+    image: cedsanc/spring-api-getresults:latest
+    container_name: spring-api-getresults
+    depends_on:
+      - mysql
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-container-getresults:3306/getresults
+      SPRING_DATASOURCE_USERNAME: app_user
+      SPRING_DATASOURCE_PASSWORD: app_password
 
 volumes:
   mysql-data:
