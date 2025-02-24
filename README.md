@@ -39,10 +39,12 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-
-
 ```bash
 chmod +x scraping_scheduler.py
+```
+
+```bash
+./scraping_scheduler.py
 ```
 
 ```SQL
