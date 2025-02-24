@@ -34,11 +34,6 @@ get_results_python [Scrap]
 ```
 
 ```bash
-git clone https://github.com/username/scraping_project.git
-cd scraping_project
-```
-
-```bash
 python -m venv venv
 source venv/bin/activate   
 pip install -r requirements.txt
