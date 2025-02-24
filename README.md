@@ -27,7 +27,7 @@ get_results_python [Scrap]
 │       │   └── tables_drop.py
 │       └── db_drop_option.py
 ├── docker-compose.yml
-├── main.py
+├── run_daily_scraping.py
 ├── notes.txt
 ├── README.md
 └── requirements.txt
@@ -44,8 +44,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+
+
 ```bash
-python main.py
+chmod +x scraping_scheduler.py
 ```
 
 ```SQL

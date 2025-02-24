@@ -1,9 +1,11 @@
+#!/usr/bin/env python3
+
 from flask import Flask
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 import logging
 
-from main import run_daily_scraping
+from run_daily_scraping import run_daily_scraping
 
 # Application Flask (optionnelle si vous voulez un endpoint HTTP)
 app = Flask(__name__)
