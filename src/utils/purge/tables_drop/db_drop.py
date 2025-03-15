@@ -55,7 +55,7 @@ def create_table(table_name):
     create_table_sql = f"""
     CREATE TABLE IF NOT EXISTS `{table_name}` (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        date_string BIGINT NULL,
+        date_string VARCHAR(255) NULL,
         team_1_name VARCHAR(255) NOT NULL,
         team_1_score VARCHAR(255) NULL,
         team_2_name VARCHAR(255) NOT NULL,

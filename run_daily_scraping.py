@@ -4,30 +4,20 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 
 from src.scraping.get_all import get_all
-from src.utils.purge_data import purge_data
 from src.utils.purge.tables_drop.db_drop_option import connection
+from src.utils.purge_data import purge_data
 from src.utils.sources.urls import urls
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
-from pyvirtualdisplay import Display
-
-display = Display(visible=False, size=(1920, 1080))
-display.start()
 
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.binary_location = "/usr/bin/chromium-browser"
-
-service = Service(executable_path="/usr/bin/chromedriver")
-driver = webdriver.Chrome(service=service, options=chrome_options)
-
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--window-size=1920x1080")
 
 def run_daily_scraping():
     start_time = time.time()
-    driver = webdriver.Chrome(service=service, options=chrome_options)
+    driver = webdriver.Chrome(options=chrome_options)
 
     try:
         for entry in urls:

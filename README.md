@@ -71,3 +71,6 @@ CREATE TABLE ranking (
 ```
 
 http://localhost:5000/scrape
+sudo apt update
+sudo apt install -y xvfb
+sudo apt install -y chromium-browser chromium-chromedriver
