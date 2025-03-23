@@ -1,0 +1,64 @@
+services:
+  mysql_getresults:
+    image: mysql:8.0.33-oracle
+    container_name: mysql-container-getresults
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - getresults-network
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$MYSQL_USER -p$MYSQL_PASSWORD"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  scraper:
+    image: cedsanc/getresultscraper
+    container_name: get_results_scraper
+    depends_on:
+      mysql_getresults:
+        condition: service_healthy
+    volumes:
+      - ./data:/app/data
+    networks:
+      - getresults-network
+    environment:
+      - ENV=production
+    command: [ "python", "scraping_scheduler.py" ]
+
+  getresultsbackend:
+    image: cedsanc/getresultsbackend
+    container_name: getresultsbackend
+    restart: always
+    depends_on:
+      mysql_getresults:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql_getresults
+      DB_PORT: 3306
+      DB_NAME: ${MYSQL_DATABASE}
+      DB_USER: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      SERVER_PORT: 8081
+    ports:
+      - "8081:8081"
+    networks:
+      - getresults-network
+
+
+volumes:
+  mysql-data:
+
+networks:
+  getresults-network:

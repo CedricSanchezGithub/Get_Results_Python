@@ -7,3 +7,5 @@ beautifulsoup4
 pymysql
 apscheduler
 PyVirtualDisplay
+cryptography
+python-dotenv
