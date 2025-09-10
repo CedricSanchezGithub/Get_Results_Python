@@ -5,7 +5,7 @@ import sys
 from flask.cli import load_dotenv
 
 
-def wait_for_mysql(host, user, password, db, port=3306, retries=10, delay=3):
+def wait_for_mysql(host, user, password, db, port, retries=10, delay=3):
     """Attend que MySQL soit prêt à accepter les connexions."""
     print(f"🔍 Tentative de connexion à MySQL @ {host}:{port}...")
     for i in range(1, retries + 1):
@@ -35,10 +35,13 @@ def get_connection():
     user = os.getenv("MYSQL_USER")
     password = os.getenv("MYSQL_PASSWORD")
     database = os.getenv("MYSQL_DATABASE")
-    port = int(os.getenv("MYSQL_PORT", 3306))
+    port = int(os.getenv("MYSQL_PORT", "3306"))
+
+    if not all([user, password, database]):
+        raise RuntimeError("Variables d'environnement manquantes pour MySQL: MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE. Vérifiez votre fichier .env ou les variables du conteneur.")
 
     # Attendre que MySQL soit opérationnel
-    wait_for_mysql(host, user, password, database, port=port)
+    wait_for_mysql(host, user, password, database, port)
 
     # Connexion réelle
     return pymysql.connect(
@@ -48,13 +51,3 @@ def get_connection():
         database=database,
         port=port
     )
-
-# def get_connection():
-#     """Crée et retourne une connexion à la base de données."""
-#     connection = pymysql.connect(
-#         host='mysql_getresults',
-#         user='root',
-#         password='root',
-#         database='getresults'
-#     )
-#     return connection

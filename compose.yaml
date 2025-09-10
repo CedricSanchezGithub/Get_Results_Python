@@ -1,7 +1,7 @@
 services:
   mysql_getresults:
     image: mysql:8.0.33-oracle
-    container_name: mysql-container-getresults
+    container_name: mysql_getresults
     restart: always
     env_file:
       - .env
@@ -10,6 +10,7 @@ services:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
     ports:
       - "3306:3306"
     volumes:
@@ -33,8 +34,14 @@ services:
       - ./data:/app/data
     networks:
       - getresults-network
+    env_file:
+      - .env
     environment:
       - ENV=production
+      - MYSQL_HOST=mysql_getresults
+      - MYSQL_PORT=3306
+    ports:
+      - "5001:5000"
     command: [ "python", "scraping_scheduler.py" ]
 
   getresultsbackend:
@@ -56,6 +63,21 @@ services:
     networks:
       - getresults-network
 
+  phpmyadmin:
+    image: phpmyadmin:5
+    container_name: phpmyadmin
+    restart: always
+    depends_on:
+      mysql_getresults:
+        condition: service_healthy
+    environment:
+      PMA_HOST: mysql_getresults
+      PMA_PORT: 3306
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "8080:80"
+    networks:
+      - getresults-network
 
 volumes:
   mysql-data:

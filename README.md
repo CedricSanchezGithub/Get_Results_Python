@@ -1,37 +1,29 @@
 # Get Results
 
-## Description
+## Résumé des endpoints & logique métier (concise)
 
-```bash
-get_results_python [Scrap]
-├── .venv
-├── data
-│   └── database
-├── src
-│   ├── database
-│   │   └── db_connector.py
-│   ├── navigation
-│   │   ├── cookies.py
-│   │   └── navigation.py
-│   ├── saving
-│   │   ├── db_writer.py
-│   │   └── save_data_csv.py
-│   ├── scraping
-│   │   ├── get_all.py
-│   │   ├── get_compet_data.py
-│   │   ├── get_match_results.py
-│   │   └── get_rank.py
-│   └── utils
-│       ├── purge
-│       │   ├── db_drop.py
-│       │   └── tables_drop.py
-│       └── db_drop_option.py
-├── docker-compose.yml
-├── run_daily_scraping.py
-├── notes.txt
-├── README.md
-└── requirements.txt
-```
+- Services (après `docker compose up`):
+  - phpMyAdmin: http://localhost:8080 — interface web pour MySQL.
+  - Backend API: http://localhost:8081 — API principale (image `cedsanc/getresultsbackend`). Endpoints de découverte communs: `/`, `/health`, `/docs`, `/openapi.json`.
+  - Scheduler Flask: http://localhost:5000 — déclencheur/monitoring du scraping de ce dépôt.
+    - GET /            → statut APScheduler
+    - GET /health      → {"status":"ok"}
+    - GET /scrape      → déclenche immédiatement le scraping en arrière‑plan et répond tout de suite par une page de confirmation.
+
+- Logique métier (vue d’ensemble):
+  1) L’endpoint GET /scrape démarre un job en arrière‑plan.
+  2) Le job exécute `run_daily_scraping()` qui:
+     - ouvre les URLs cibles (src/utils/sources/urls.py) avec Selenium (headless),
+     - accepte la bannière cookies si présente, navigue journée par journée,
+     - extrait résultats/classements (src/scraping/*), sauvegarde CSV (data/pool_*.csv),
+     - écrit en base MySQL (src/saving/db_writer.py) via `src/database/db_connector.py`.
+  3) APScheduler planifie aussi ce job quotidiennement (cron 00:00).
+
+- Accès base de données:
+  - MySQL: host `localhost`, port `3306`, base `get_results` (ou `${MYSQL_DATABASE}`), user/pass depuis `.env`.
+  - Depuis les conteneurs, l’hôte est `mysql_getresults`.
+
+## Installation rapide
 
 ```bash
 python -m venv venv
@@ -46,31 +38,3 @@ chmod +x scraping_scheduler.py
 ```bash
 ./scraping_scheduler.py
 ```
-
-```SQL
-DROP TABLE pool;
-CREATE TABLE pool (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    date VARCHAR(255) NOT NULL,      
-    team_1_name VARCHAR(255) NOT NULL,     
-    team_1_score INT NOT NULL,             
-    team_2_name VARCHAR(255) NOT NULL,    
-    team_2_score INT NOT NULL,             
-    match_link VARCHAR(255),         
-    competition VARCHAR(255),        
-    day VARCHAR(255)                 
-);
-
-CREATE TABLE ranking (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    position INT NOT NULL,
-    club_name VARCHAR(255) NOT NULL,
-    points INT NOT NULL
-);
-
-```
-
-http://localhost:5000/scrape
-sudo apt update
-sudo apt install -y xvfb
-sudo apt install -y chromium-browser chromium-chromedriver
