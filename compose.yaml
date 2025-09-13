@@ -44,25 +44,6 @@ services:
       - "5001:5000"
     command: [ "python", "scraping_scheduler.py" ]
 
-  getresultsbackend:
-    image: cedsanc/getresultsbackend
-    container_name: getresultsbackend
-    restart: always
-    depends_on:
-      mysql_getresults:
-        condition: service_healthy
-    environment:
-      DB_HOST: mysql_getresults
-      DB_PORT: 3306
-      DB_NAME: ${MYSQL_DATABASE}
-      DB_USER: ${MYSQL_USER}
-      DB_PASSWORD: ${MYSQL_PASSWORD}
-      SERVER_PORT: 8081
-    ports:
-      - "8081:8081"
-    networks:
-      - getresults-network
-
   phpmyadmin:
     image: phpmyadmin:5
     container_name: phpmyadmin

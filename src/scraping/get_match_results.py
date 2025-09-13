@@ -4,7 +4,6 @@ from datetime import datetime
 
 import pandas as pd
 from bs4 import BeautifulSoup
-from pandas.io.formats import string
 
 from src.scraping.get_competition_and_day import get_day_via_url, get_competition_via_url
 from src.saving.save_data_csv import save_data
@@ -80,24 +79,58 @@ def extract_team_data(container, side_class):
 
 
 def parse_date_to_milliseconds(date_string):
-
-    if date_string is not string:
+    """
+    Convertit une date française de type "samedi 07 septembre 2024 à 14H00"
+    en timestamp (millisecondes). Retourne None si invalide.
+    """
+    # Validation d'entrée
+    if not date_string or not isinstance(date_string, str):
         print("Date invalide ou vide")
-        return 0
+        return None
 
-    # Définir la locale pour reconnaître les noms de jours et mois en français
-    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+    original = date_string
 
-    # Remplacer "à" et "H" pour faciliter le parsing
+    # Normalisation simple: retirer " à ", transformer 14H00 -> 14:00
     date_string = date_string.replace(" à ", " ").replace("H", ":")
 
-    # Parser la date
-    date_format = "%A %d %B %Y %H:%M"
+    # Certaines locales fr_FR ne sont pas installées dans les conteneurs minimalistes.
+    # On tente d'abord avec la locale fr_FR, sinon on fait un mapping manuel des mois.
     try:
-        dt = datetime.strptime(date_string, date_format)
-        # Convertir en timestamp en millisecondes
-        timestamp_ms = int(dt.timestamp() * 1000)
-        return timestamp_ms
-    except ValueError as e:
-        print(f"Erreur lors du parsing de la date : {e}")
-        return None
+        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+        try:
+            dt = datetime.strptime(date_string, "%A %d %B %Y %H:%M")
+            return int(dt.timestamp() * 1000)
+        except ValueError:
+            pass  # on retombera sur le fallback
+    except Exception:
+        # Locale indisponible: on passe au fallback
+        pass
+
+    # Fallback: mapping manuel des mois français vers nombres
+    months = {
+        'janvier': '01', 'février': '02', 'fevrier': '02', 'mars': '03', 'avril': '04',
+        'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08', 'aout': '08',
+        'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12', 'decembre': '12'
+    }
+
+    # Exemple attendu après normalisation: "samedi 07 septembre 2024 14:00"
+    parts = date_string.strip().split()
+    # On s'attend à: [jour_semaine, jour, mois, annee, heure]
+    if len(parts) >= 5:
+        # garder les 5 premiers éléments (au cas où des tokens en plus)
+        _, day, month_name, year, time_part = parts[0], parts[1], parts[2].lower(), parts[3], parts[4]
+        month_num = months.get(month_name)
+        if month_num:
+            try:
+                # Construire une chaîne au format ISO: YYYY-MM-DD HH:MM
+                norm = f"{year}-{day.zfill(2)}-{month_num} {time_part}"
+                dt = datetime.strptime(norm, "%Y-%d-%m %H:%M")
+                return int(dt.timestamp() * 1000)
+            except ValueError as e:
+                print(f"Erreur parsing fallback pour '{original}' → '{norm}': {e}")
+        else:
+            print(f"Mois inconnu dans la date: '{month_name}' (original: '{original}')")
+    else:
+        print(f"Format inattendu pour la date: '{original}'")
+
+    return None

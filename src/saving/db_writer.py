@@ -50,15 +50,28 @@ def db_writer_results(category):
 
                 for row in reader:
                     try:
+                        # Préparation des champs avec conversions sûres
+                        def to_int_or_none(v):
+                            try:
+                                return int(v) if v not in (None, "", "-") else None
+                            except Exception:
+                                return None
+                        def to_str_or_none(v):
+                            return v if v not in (None, "") else None
+
+                        date_ms = to_int_or_none(row.get('date_string'))
+                        team_1_score = to_int_or_none(row.get('team_1_score'))
+                        team_2_score = to_int_or_none(row.get('team_2_score'))
+
                         cursor.execute(insert_sql, (
-                            row['date_string'],
-                            row['team_1_name'],
-                            row['team_1_score'],
-                            row['team_2_name'],
-                            row['team_2_score'],
-                            row['match_link'],
-                            row['competition'],
-                            row['journee']
+                            date_ms,
+                            to_str_or_none(row.get('team_1_name')),
+                            team_1_score,
+                            to_str_or_none(row.get('team_2_name')),
+                            team_2_score,
+                            to_str_or_none(row.get('match_link')),
+                            to_str_or_none(row.get('competition')),
+                            to_str_or_none(row.get('journee'))
                         ))
                     except Exception as e:
                         error_message = f"Erreur lors de l'insertion pour la ligne {row}: {e}"
