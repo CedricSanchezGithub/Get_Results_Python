@@ -6,3 +6,21 @@ def purge_data(category):
     purge_csv(category)
     truncate_table(f"pool_{category}")
     # truncate_table(f"ranking_{category}")
+
+# Fichier : src/utils/purge_data.py
+
+from src.database.db_connector import get_connection
+
+def purge_pool_data(pool_id):
+    """Supprime les anciens résultats pour une poule spécifique de la table 'matches'."""
+    sql = "DELETE FROM matches WHERE pool_id = %s"
+    connection = get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(sql, (pool_id,))
+            connection.commit()
+            print(f"Données purgées pour la poule '{pool_id}' dans la table 'matches'.")
+    except Exception as e:
+        print(f"Erreur lors de la purge pour la poule '{pool_id}': {e}")
+    finally:
+        connection.close()

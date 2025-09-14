@@ -53,17 +53,18 @@ def create_table(table_name):
     """
 
     create_table_sql = f"""
-    CREATE TABLE IF NOT EXISTS `{table_name}` (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        date_string VARCHAR(255) NULL,
-        team_1_name VARCHAR(255) NOT NULL,
-        team_1_score VARCHAR(255) NULL,
-        team_2_name VARCHAR(255) NOT NULL,
-        team_2_score VARCHAR(255) NULL,
-        match_link VARCHAR(255) NULL,
-        competition VARCHAR(255) NOT NULL,
-        day VARCHAR(255) NULL
-    );
+        CREATE TABLE matches (
+            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+            pool_id VARCHAR(255) NOT NULL,
+            match_date VARCHAR(255) NULL, -- On garde VARCHAR pour l'instant, plus simple
+            team_1_name VARCHAR(255) NOT NULL,
+            team_1_score INT NULL, -- Type corrigé
+            team_2_name VARCHAR(255) NOT NULL,
+            team_2_score INT NULL, -- Type corrigé
+            match_link VARCHAR(255) NULL,
+            competition VARCHAR(255) NULL,
+            round VARCHAR(255) NULL
+        );
     """
 
     connection = get_connection()
