@@ -1,8 +1,6 @@
 import csv
 import logging
-
 from src.database.db_connector import get_connection
-from src.utils.purge.tables_drop.db_drop_option import connection
 
 
 def db_writer_ranking(category):
@@ -14,18 +12,21 @@ def db_writer_ranking(category):
     VALUES (%s, %s, %s)
     """
 
+    conn = get_connection()
     try:
-        with connection.cursor() as cursor:
+        with conn.cursor() as cursor:
             with open(csv_file, newline='', encoding='utf-8') as file:
                 reader = csv.DictReader(file)
                 for row in reader:
                     cursor.execute(sql, (row['position'], row['club_name'], row['points']))
 
-            connection.commit()
-            print(f"Données insérées avec succès depuis {csv_file}")
+            conn.commit()
+            logging.info(f"Classement inséré avec succès depuis {csv_file} dans {table_name}")
 
     except Exception as e:
-        print(f"Erreur lors de l'insertion dans 'ranking' : {e}")
+        logging.error(f"Erreur lors de l'insertion du ranking dans '{table_name}' : {e}")
+    finally:
+        conn.close()
 
 
 
@@ -42,39 +43,56 @@ def db_writer_results(category):
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
-    connection = get_connection()
+    conn = get_connection()
     try:
-        with connection.cursor() as cursor:
+        inserted = 0
+        read_rows = 0
+        with conn.cursor() as cursor:
             with open(pool_csv, newline='', encoding='utf-8') as results_file:
                 reader = csv.DictReader(results_file)
                 for row in reader:
+                    read_rows += 1
                     try:
+                        def to_int_or_none(v):
+                            try:
+                                return int(v) if v not in (None, "", "-") else None
+                            except Exception:
+                                return None
+                        def to_str_or_none(v):
+                            return v if v not in (None, "") else None
 
-                        team_1_score = int(row['team_1_score']) if row['team_1_score'].isdigit() else None
-                        team_2_score = int(row['team_2_score']) if row['team_2_score'].isdigit() else None
+                        date_ms = to_int_or_none(row.get('date_string'))
+                        team_1_score = to_int_or_none(row.get('team_1_score'))
+                        team_2_score = to_int_or_none(row.get('team_2_score'))
 
                         cursor.execute(insert_sql, (
-                            category, #
-                            row['date_string'],
-                            row['team_1_name'],
+                            category,
+                            date_ms,
+                            to_str_or_none(row.get('team_1_name')),
                             team_1_score,
-                            row['team_2_name'],
+                            to_str_or_none(row.get('team_2_name')),
                             team_2_score,
-                            row['match_link'],
-                            row['competition'],
-                            row['journee']
+                            to_str_or_none(row.get('match_link')),
+                            to_str_or_none(row.get('competition')),
+                            to_str_or_none(row.get('journee'))
                         ))
+                        inserted += 1
                     except Exception as e:
-                        error_message = f"Erreur lors de l'insertion pour la ligne {row}: {e}"
-                        print(error_message)
-                        logging.error(error_message)
+                        logging.error(
+                            f"Erreur lors de l'insertion d'un match",
+                            extra={
+                                'category': category,
+                                'competition': row.get('competition'),
+                                'journee': row.get('journee'),
+                                'row': row,
+                                'error': str(e),
+                            }
+                        )
 
-            connection.commit()
-            print(f"Données pour la poule '{category}' insérées avec succès dans '{table_name}'")
+            conn.commit()
+            logging.info(f"Insertion terminée pour la poule '{category}' dans '{table_name}': {inserted}/{read_rows} lignes insérées")
 
     except Exception as e:
-        error_message = f"Erreur lors de l'écriture dans '{table_name}': {e}"
-        logging.error(error_message)
-        print(error_message)
+        logging.exception(f"Erreur lors de l'écriture dans '{table_name}': {e}")
     finally:
-        connection.close()
+        conn.close()

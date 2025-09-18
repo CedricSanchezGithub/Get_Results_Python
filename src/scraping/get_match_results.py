@@ -1,6 +1,7 @@
 import locale
 import os
 from datetime import datetime
+import logging
 
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -16,13 +17,14 @@ def get_pool_results(driver, category):
     os.makedirs(folder, exist_ok=True)
     csv_filepath = os.path.join(folder, csv_filename)
 
+    logger = logging.getLogger(__name__)
     soup = BeautifulSoup(driver.page_source, "html.parser")
     competition = get_competition_via_url(driver)
     day = get_day_via_url(driver)
 
     main_containers = soup.find_all(class_="styles_rencontre__9O0P0")
     if not main_containers:
-        print(f"Aucune balise trouvée pour la classe 'styles_rencontre__9O0P0")
+        logger.warning("Aucune balise trouvée pour la classe 'styles_rencontre__9O0P0'")
         return
 
     match_data = []
@@ -47,7 +49,7 @@ def get_pool_results(driver, category):
             })
 
         except AttributeError as e:
-            print(f"Erreur dans un conteneur : {e}")
+            logger.error(f"Erreur dans un conteneur (category={category}, competition={competition}, journee={day}): {e}")
             continue
 
     all_data = pd.DataFrame(match_data)
@@ -85,7 +87,7 @@ def parse_date_to_milliseconds(date_string):
     """
     # Validation d'entrée
     if not date_string or not isinstance(date_string, str):
-        print("Date invalide ou vide")
+        logging.getLogger(__name__).warning("Date invalide ou vide")
         return None
 
     original = date_string
@@ -127,10 +129,10 @@ def parse_date_to_milliseconds(date_string):
                 dt = datetime.strptime(norm, "%Y-%d-%m %H:%M")
                 return int(dt.timestamp() * 1000)
             except ValueError as e:
-                print(f"Erreur parsing fallback pour '{original}' → '{norm}': {e}")
+                logging.getLogger(__name__).warning(f"Erreur parsing fallback pour '{original}' → '{norm}': {e}")
         else:
-            print(f"Mois inconnu dans la date: '{month_name}' (original: '{original}')")
+            logging.getLogger(__name__).warning(f"Mois inconnu dans la date: '{month_name}' (original: '{original}')")
     else:
-        print(f"Format inattendu pour la date: '{original}'")
+        logging.getLogger(__name__).warning(f"Format inattendu pour la date: '{original}'")
 
     return None

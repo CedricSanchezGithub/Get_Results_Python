@@ -1,8 +1,10 @@
 import os
+import logging
 
 from bs4 import BeautifulSoup
 
 folder = "data"
+
 
 def get_content(driver, category, tag_name=None ):
     """Récupère le contenu d'une balise ou d'une classe HTML spécifiée et l'enregistre dans un fichier HTML,
@@ -23,13 +25,13 @@ def get_content(driver, category, tag_name=None ):
     if tag_name:
         content = soup.find(tag_name)
     else:
-        print("Ni balise ni classe spécifiée. Aucun contenu récupéré.")
+        logging.getLogger(__name__).warning("Ni balise ni classe spécifiée. Aucun contenu récupéré.")
         return
 
     if content:
         # Sauvegarde en fichier HTML
         with open(html_filepath, "w", encoding="utf-8") as file:
             file.write(str(content))
-        print(f"Contenu de <{tag_name}> sauvegardé dans le fichier : {html_filepath}")
+        logging.getLogger(__name__).info(f"Contenu de <{tag_name}> sauvegardé dans le fichier : {html_filepath}")
 
 

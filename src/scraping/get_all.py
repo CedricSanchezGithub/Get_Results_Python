@@ -8,9 +8,11 @@ from src.utils.purge.tables_drop.db_drop import create_table
 from src.utils.purge_data import purge_pool_data
 
 
+import logging
+
 def end_of_navigation():
     """Callback appelé à la fin de la navigation."""
-    print("Navigation terminée. Fin des pages atteinte.")
+    logging.getLogger(__name__).info("Navigation terminée. Fin des pages atteinte.")
 
 
 def get_all(driver, category):
@@ -24,11 +26,11 @@ def get_all(driver, category):
 
     page_count = 1
     while True:
-        print(f"Scraping page {page_count} pour la catégorie '{category}'")
+        logging.getLogger(__name__).info(f"Scraping page {page_count} pour la catégorie '{category}'")
         get_pool_results(driver, category)
         page_count += 1
         if not navigation(driver):
-            print("Toutes les journées ont été traitées.")
+            logging.getLogger(__name__).info("Toutes les journées ont été traitées.")
             break
 
     db_writer_results(category)

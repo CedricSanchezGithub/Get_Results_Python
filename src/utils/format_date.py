@@ -1,5 +1,6 @@
 from datetime import datetime
 import locale
+import logging
 
 
 def format_date(date_string):

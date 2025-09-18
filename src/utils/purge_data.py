@@ -1,3 +1,4 @@
+import logging
 from src.utils.purge.csv_drop.purge_csv import purge_csv
 from src.utils.purge.tables_drop.db_drop import truncate_table
 
@@ -19,8 +20,8 @@ def purge_pool_data(pool_id):
         with connection.cursor() as cursor:
             cursor.execute(sql, (pool_id,))
             connection.commit()
-            print(f"Données purgées pour la poule '{pool_id}' dans la table 'matches'.")
+            logging.getLogger(__name__).info(f"Données purgées pour la poule '{pool_id}' dans la table 'matches'.")
     except Exception as e:
-        print(f"Erreur lors de la purge pour la poule '{pool_id}': {e}")
+        logging.getLogger(__name__).error(f"Erreur lors de la purge pour la poule '{pool_id}': {e}")
     finally:
         connection.close()

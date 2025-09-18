@@ -2,12 +2,14 @@ import os
 import time
 import pymysql
 import sys
+import logging
 from flask.cli import load_dotenv
 
 
 def wait_for_mysql(host, user, password, db, port, retries=10, delay=3):
     """Attend que MySQL soit prêt à accepter les connexions."""
-    print(f"🔍 Tentative de connexion à MySQL @ {host}:{port}...")
+    logger = logging.getLogger(__name__)
+    logger.info(f"Tentative de connexion à MySQL @ {host}:{port}...")
     for i in range(1, retries + 1):
         try:
             conn = pymysql.connect(
@@ -18,13 +20,13 @@ def wait_for_mysql(host, user, password, db, port, retries=10, delay=3):
                 port=port
             )
             conn.close()
-            print(f"✅ MySQL est prêt (connexion réussie à la tentative {i}).")
+            logger.info(f"MySQL est prêt (connexion réussie à la tentative {i}).")
             return
         except pymysql.err.OperationalError as e:
-            print(f"⏳ [{i}/{retries}] MySQL non dispo : {e}")
+            logger.warning(f"[{i}/{retries}] MySQL non disponible: {e}")
             time.sleep(delay)
 
-    print("❌ ERREUR : Impossible de se connecter à MySQL après plusieurs tentatives.")
+    logger.error("Impossible de se connecter à MySQL après plusieurs tentatives.")
     sys.exit(1)
 
 

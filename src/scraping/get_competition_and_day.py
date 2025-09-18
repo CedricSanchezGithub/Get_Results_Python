@@ -1,4 +1,5 @@
 import os
+import logging
 import pandas as pd
 
 def get_competition_via_url(driver):
@@ -37,4 +38,4 @@ def save_to_csv(csv_filepath, competition, journee):
         combined_data = new_data
 
     combined_data.to_csv(csv_filepath, index=False)
-    print(f"Informations enregistrées : {competition}, {journee} dans {csv_filepath}")
+    logging.getLogger(__name__).info(f"Informations enregistrées : {competition}, {journee} dans {csv_filepath}")
