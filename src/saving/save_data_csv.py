@@ -1,5 +1,6 @@
 # Charger les données existantes si le fichier CSV existe
 import os
+import logging
 
 import pandas as pd
 
@@ -16,4 +17,4 @@ def save_data(csv_filepath, all_data):
 
     # Sauvegarder les données combinées dans le fichier CSV
     combined_data.to_csv(csv_filepath, index=False)
-    print(f"Données sauvegardées dans le fichier CSV : {csv_filepath}")
+    logging.getLogger(__name__).info(f"Données sauvegardées dans le fichier CSV : {csv_filepath}")

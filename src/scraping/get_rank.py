@@ -1,6 +1,7 @@
 import os
 import csv
 import json
+import logging
 from bs4 import BeautifulSoup
 
 def get_rank(driver, is_csv=False, is_html=False):
@@ -26,7 +27,7 @@ def get_rank(driver, is_csv=False, is_html=False):
             # Sauvegarde en fichier HTML
             with open(html_filepath, "w", encoding="utf-8") as file:
                 file.write(str(tbody_content))
-            print(f"Contenu de <tbody> sauvegardé dans le fichier : {html_filepath}")
+            logging.getLogger(__name__).info(f"Contenu de <tbody> sauvegardé dans le fichier : {html_filepath}")
 
         # Extraction des données et sauvegarde en CSV
         if is_csv:
@@ -45,6 +46,7 @@ def get_rank(driver, is_csv=False, is_html=False):
                 writer = csv.DictWriter(csv_file, fieldnames=["position", "club_name", "points"])
                 writer.writeheader()
                 writer.writerows(data)
-            print(f"Données sauvegardées dans le fichier CSV : {csv_filepath}")
+            logging.getLogger(__name__).info(f"Données sauvegardées dans le fichier CSV : {csv_filepath}")
         else:
-            return print("Aucun choix fait entre CSV ou HTML. Aucune donnée retournée")
+            logging.getLogger(__name__).warning("Aucun choix fait entre CSV ou HTML. Aucune donnée retournée")
+            return

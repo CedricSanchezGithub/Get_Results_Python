@@ -8,15 +8,27 @@ drop_sql_pool = """
 DROP TABLE IF EXISTS pool;
 """
 
-connection = get_connection()
 
 def drop_tables_ranking():
-    with connection.cursor() as cursor:
-        cursor.execute(drop_sql_ranking)
-        print("Table 'ranking' dropped")
+    """Drop la table 'ranking' en ouvrant une connexion locale et éphémère."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(drop_sql_ranking)
+            print("Table 'ranking' dropped")
+        conn.commit()
+    finally:
+        conn.close()
+
 
 def drop_tables_results():
-    with connection.cursor() as cursor:
-        cursor.execute(drop_sql_pool)
-        print("Table 'pool' dropped")
+    """Drop la table 'pool' en ouvrant une connexion locale et éphémère."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(drop_sql_pool)
+            print("Table 'pool' dropped")
+        conn.commit()
+    finally:
+        conn.close()
 
