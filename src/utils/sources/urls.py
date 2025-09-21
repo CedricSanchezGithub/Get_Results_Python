@@ -17,21 +17,22 @@ urls = [
     #{"category": "13f2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2024-2025-20/departemental/13-f-championnat-26231/poule-154434/journee-1/"},
     #{"category": "11f", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2024-2025-20/departemental/11-f-championnat-26230/poule-154436/journee-1/"},
 
-    {"category": "16f", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-f-prenationale-28365/poule-169120/journee-1/"},
-    {"category": "18f", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-f-2e-division-28369/poule-172464/"},
-    {"category": "15f", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-1ere-division-28372/poule-169159/"},
-    {"category": "15f-2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-2e-division-28373/poule-172423/"},
-    {"category": "16m", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-m-preregionale-1ere-division-28343/poule-169284/"},
-    {"category": "18m", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-m-2e-division-28349/poule-169141/"},
-    {"category": "15m", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-m-3e-division-28356/poule-172527/"}
+    {"category": "SF", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-f-prenationale-28365/poule-169120/journee-1/"},
+    {"category": "-18F", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-f-2e-division-28369/poule-172464/"},
+    {"category": "-15F1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-1ere-division-28372/poule-169159/"},
+    {"category": "-15F2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-2e-division-28373/poule-172423/"},
+    {"category": "-13F1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-13-feminins-28964/"},
+    {"category": "-11F", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-11-feminins-28963/"},
+
+    {"category": "SG", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-m-preregionale-1ere-division-28343/poule-169284/"},
+    {"category": "-18M2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-m-3e-division-28350/poule-172487/"},
+    {"category": "-18M1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-m-2e-division-28349/poule-169141/"},
+    {"category": "-15M1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-m-2e-division-28355/poule-169153/"},
+    {"category": "-15M2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-m-3e-division-28356/poule-172527/"}
+    {"category": "-13M1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-13-masculins-28913/poule-172095/"}
 ]
 
-
-# https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-f-prenationale-28365/poule-169120/
-# https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-f-2e-division-28369/poule-172464/
-# https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-1ere-division-28372/poule-169159/
-# https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-2e-division-28373/poule-172423/
-# https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-m-preregionale-1ere-division-28343/poule-169284/
-# https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-m-2e-division-28349/poule-169141/
-# https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-m-3e-division-28350/poule-172487/
-# https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-m-3e-division-28356/poule-172527/
+#il manque les liens de :
+#-11M
+#-13M2
+#-13F2
