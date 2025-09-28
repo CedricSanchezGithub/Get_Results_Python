@@ -39,7 +39,7 @@ def db_writer_results(category):
     error_log_file = f"errors_{category}.log"
 
     insert_sql = f"""
-    INSERT INTO {table_name} (pool_id, date_string, team_1_name, team_1_score, team_2_name, team_2_score, match_link, competition, round)
+    INSERT INTO {table_name} (pool_id, match_date, team_1_name, team_1_score, team_2_name, team_2_score, match_link, competition, round)
     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
@@ -61,7 +61,7 @@ def db_writer_results(category):
                         def to_str_or_none(v):
                             return v if v not in (None, "") else None
 
-                        date_ms = to_int_or_none(row.get('date_string'))
+                        date_ms = to_int_or_none(row.get('match_date'))
                         team_1_score = to_int_or_none(row.get('team_1_score'))
                         team_2_score = to_int_or_none(row.get('team_2_score'))
 

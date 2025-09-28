@@ -38,7 +38,7 @@ def get_pool_results(driver, category):
             match_link = container.get("href", None)
 
             match_data.append({
-                "date_string": parse_date_to_milliseconds(date_string),
+                "match_date": parse_date_to_milliseconds(date_string),
                 "team_1_name": team_left_name,
                 "team_1_score": team_left_score,
                 "team_2_name": team_right_name,
