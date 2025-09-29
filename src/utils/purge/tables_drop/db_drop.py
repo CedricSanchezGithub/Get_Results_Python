@@ -46,46 +46,6 @@ def table_exists(table_name):
     finally:
         connection.close()
 
-
-def create_table(table_name):
-    """
-    Crée une table si elle n'existe pas et informe si elle existait déjà.
-    """
-
-    create_table_sql = f"""
-        CREATE TABLE matches (
-            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-            pool_id VARCHAR(255) NOT NULL,
-            match_date VARCHAR(255) NULL, 
-            team_1_name VARCHAR(255) NOT NULL,
-            team_1_score INT NULL, 
-            team_2_name VARCHAR(255) NOT NULL,
-            team_2_score INT NULL, 
-            match_link VARCHAR(255) NULL,
-            competition VARCHAR(255) NULL,
-            round VARCHAR(255) NULL
-        );
-    """
-
-    connection = get_connection()
-    try:
-        table_already_exists = table_exists(table_name)
-
-        with connection.cursor() as cursor:
-            cursor.execute(create_table_sql)
-            connection.commit()
-
-        if table_already_exists:
-            print(f"Table '{table_name}' existait déjà.")
-        else:
-            print(f"Table '{table_name}' créée avec succès.")
-
-    except Exception as e:
-        print(f"Erreur lors de la création de la table '{table_name}': {e}")
-
-    finally:
-        connection.close()
-
 if __name__ == "__main__":
     tables = list_tables()
     if tables:
