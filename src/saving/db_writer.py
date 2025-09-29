@@ -29,70 +29,100 @@ def db_writer_ranking(category):
         conn.close()
 
 
+import csv
+import logging
+from src.database.db_connector import get_connection
+
+
+def _to_int_or_none(value):
+    """Tente de convertir une valeur en entier, sinon retourne None."""
+    if value in (None, "", "-"):
+        return None
+    try:
+        return int(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def _to_str_or_none(value):
+    """Retourne la chaîne de caractères si elle n'est pas vide, sinon None."""
+    return value if value else None
 
 
 def db_writer_results(category):
-    """Insère les données des résultats de match dans la table unique 'matches'."""
-
+    """
+    Lit les résultats d'un match depuis un fichier CSV et les insère dans la table 'matches'.
+    """
     pool_csv = f"data/pool_{category}.csv"
     table_name = "matches"
-    error_log_file = f"errors_{category}.log"
 
+    # La requête est définie une seule fois pour plus de clarté.
+    # Note: La colonne 'round' correspond à 'journee' dans le CSV.
     insert_sql = f"""
-    INSERT INTO {table_name} (pool_id, match_date, team_1_name, team_1_score, team_2_name, team_2_score, match_link, competition, round)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        INSERT INTO {table_name} 
+            (pool_id, match_date, team_1_name, team_1_score, team_2_name, team_2_score, 
+             match_link, competition, round)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
     """
 
-    conn = get_connection()
+    connection = get_connection()
+    if not connection:
+        logging.error("Impossible d'obtenir une connexion à la base de données.")
+        return
+
+    inserted_count = 0
+    read_count = 0
+
     try:
-        inserted = 0
-        read_rows = 0
-        with conn.cursor() as cursor:
-            with open(pool_csv, newline='', encoding='utf-8') as results_file:
-                reader = csv.DictReader(results_file)
-                for row in reader:
-                    read_rows += 1
-                    try:
-                        def to_int_or_none(v):
-                            try:
-                                return int(v) if v not in (None, "", "-") else None
-                            except Exception:
-                                return None
-                        def to_str_or_none(v):
-                            return v if v not in (None, "") else None
+        with connection.cursor() as cursor:
+            try:
+                with open(pool_csv, mode='r', newline='', encoding='utf-8') as csv_file:
+                    reader = csv.DictReader(csv_file)
+                    for row in reader:
+                        read_count += 1
 
-                        date_ms = to_int_or_none(row.get('match_date'))
-                        team_1_score = to_int_or_none(row.get('team_1_score'))
-                        team_2_score = to_int_or_none(row.get('team_2_score'))
-
-                        cursor.execute(insert_sql, (
+                        # 1. Préparation des données pour l'insertion.
+                        #    Cette étape isole la logique de nettoyage des données.
+                        data_tuple = (
                             category,
-                            date_ms,
-                            to_str_or_none(row.get('team_1_name')),
-                            team_1_score,
-                            to_str_or_none(row.get('team_2_name')),
-                            team_2_score,
-                            to_str_or_none(row.get('match_link')),
-                            to_str_or_none(row.get('competition')),
-                            to_str_or_none(row.get('journee'))
-                        ))
-                        inserted += 1
-                    except Exception as e:
-                        logging.error(
-                            f"Erreur lors de l'insertion d'un match",
-                            extra={
-                                'category': category,
-                                'competition': row.get('competition'),
-                                'journee': row.get('journee'),
-                                'row': row,
-                                'error': str(e),
-                            }
+                            _to_str_or_none(row.get('match_date')),
+                            _to_str_or_none(row.get('team_1_name')),
+                            _to_int_or_none(row.get('team_1_score')),
+                            _to_str_or_none(row.get('team_2_name')),
+                            _to_int_or_none(row.get('team_2_score')),
+                            _to_str_or_none(row.get('match_link')),
+                            _to_str_or_none(row.get('competition')),
+                            _to_str_or_none(row.get('journee'))
                         )
 
-            conn.commit()
-            logging.info(f"Insertion terminée pour la poule '{category}' dans '{table_name}': {inserted}/{read_rows} lignes insérées")
+                        # 2. Log des données avant l'insertion (essentiel pour le débogage).
+                        #    Utiliser .debug pour éviter de surcharger les logs en production.
+                        logging.debug(f"Préparation de l'insertion : {data_tuple}")
+
+                        try:
+                            # 3. Exécution de la requête pour la ligne actuelle.
+                            cursor.execute(insert_sql, data_tuple)
+                            inserted_count += 1
+                        except Exception as e:
+                            logging.error(f"Échec de l'insertion pour la ligne : {row}", exc_info=True)
+
+            except FileNotFoundError:
+                logging.error(f"Le fichier CSV '{pool_csv}' n'a pas été trouvé.")
+                return  # Arrête la fonction si le fichier n'existe pas.
+
+        # 4. Valide la transaction si tout s'est bien passé.
+        connection.commit()
+        logging.info(
+            f"Insertion terminée pour la poule '{category}' : "
+            f"{inserted_count}/{read_count} lignes insérées dans '{table_name}'."
+        )
 
     except Exception as e:
-        logging.exception(f"Erreur lors de l'écriture dans '{table_name}': {e}")
+        # En cas de problème majeur (connexion perdue, etc.), annule la transaction.
+        logging.exception(f"Erreur majeure lors de l'écriture dans '{table_name}', annulation de la transaction.")
+        if connection:
+            connection.rollback()
     finally:
-        conn.close()
+        # Assure que la connexion est toujours fermée.
+        if connection:
+            connection.close()

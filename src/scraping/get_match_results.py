@@ -4,15 +4,15 @@ import logging
 import pandas as pd
 from bs4 import BeautifulSoup
 
+from src.config import DATA_DIR
 from src.scraping.get_competition_and_day import get_day_via_url, get_competition_via_url
 from src.saving.save_data_csv import save_data
 
 
 def get_pool_results(driver, category):
     csv_filename = f"pool_{category}.csv"
-    folder = "data"
-    os.makedirs(folder, exist_ok=True)
-    csv_filepath = os.path.join(folder, csv_filename)
+    os.makedirs(DATA_DIR, exist_ok=True)
+    csv_filepath = os.path.join(DATA_DIR, csv_filename)
 
     logger = logging.getLogger(__name__)
     soup = BeautifulSoup(driver.page_source, "html.parser")
@@ -29,7 +29,7 @@ def get_pool_results(driver, category):
     for container in main_containers:
         try:
             date_container = container.find("p", class_="block_date__dYMQX")
-            date_string = date_container.text.strip() if date_container else None
+            date_string = date_container.text.strip() if date_container else "Aucune date"
             team_left_name, team_left_score = extract_team_data(container, "styles_left__svLY+")
             team_right_name, team_right_score = extract_team_data(container, "styles_right__wdfIf")
             match_link = container.get("href", None)
