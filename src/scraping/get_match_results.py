@@ -2,6 +2,7 @@ import locale
 import os
 from datetime import datetime
 import logging
+from typing import Union
 
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -80,59 +81,47 @@ def extract_team_data(container, side_class):
     return team_name, team_score
 
 
-def parse_date_to_milliseconds(date_string):
+def parse_date_to_milliseconds(date_string: str) -> Union[int, None]:
     """
     Convertit une date française de type "samedi 07 septembre 2024 à 14H00"
     en timestamp (millisecondes). Retourne None si invalide.
     """
-    # Validation d'entrée
     if not date_string or not isinstance(date_string, str):
-        logging.getLogger(__name__).warning("Date invalide ou vide")
+        logging.getLogger(__name__).warning("Date invalide ou vide fournie.")
         return None
 
-    original = date_string
+    # 1. Nettoyage et normalisation
+    date_string = date_string.lower().replace(" à ", " ").replace("h", ":")
 
-    # Normalisation simple: retirer " à ", transformer 14H00 -> 14:00
-    date_string = date_string.replace(" à ", " ").replace("H", ":")
-
-    # Certaines locales fr_FR ne sont pas installées dans les conteneurs minimalistes.
-    # On tente d'abord avec la locale fr_FR, sinon on fait un mapping manuel des mois.
-    try:
-        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
-        try:
-            dt = datetime.strptime(date_string, "%A %d %B %Y %H:%M")
-            return int(dt.timestamp() * 1000)
-        except ValueError:
-            pass  # on retombera sur le fallback
-    except Exception:
-        # Locale indisponible: on passe au fallback
-        pass
-
-    # Fallback: mapping manuel des mois français vers nombres
+    # 2. Mapping des mois (robuste et indépendant de la locale)
     months = {
-        'janvier': '01', 'février': '02', 'fevrier': '02', 'mars': '03', 'avril': '04',
-        'mai': '05', 'juin': '06', 'juillet': '07', 'août': '08', 'aout': '08',
-        'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12', 'decembre': '12'
+        'janvier': '01', 'février': '02', 'fevrier': '02', 'mars': '03',
+        'avril': '04', 'mai': '05', 'juin': '06', 'juillet': '07',
+        'août': '08', 'aout': '08', 'septembre': '09', 'octobre': '10',
+        'novembre': '11', 'décembre': '12', 'decembre': '12'
     }
 
-    # Exemple attendu après normalisation: "samedi 07 septembre 2024 14:00"
-    parts = date_string.strip().split()
-    # On s'attend à: [jour_semaine, jour, mois, annee, heure]
-    if len(parts) >= 5:
-        # garder les 5 premiers éléments (au cas où des tokens en plus)
-        _, day, month_name, year, time_part = parts[0], parts[1], parts[2].lower(), parts[3], parts[4]
-        month_num = months.get(month_name)
-        if month_num:
-            try:
-                # Construire une chaîne au format ISO: YYYY-MM-DD HH:MM
-                norm = f"{year}-{day.zfill(2)}-{month_num} {time_part}"
-                dt = datetime.strptime(norm, "%Y-%d-%m %H:%M")
-                return int(dt.timestamp() * 1000)
-            except ValueError as e:
-                logging.getLogger(__name__).warning(f"Erreur parsing fallback pour '{original}' → '{norm}': {e}")
-        else:
-            logging.getLogger(__name__).warning(f"Mois inconnu dans la date: '{month_name}' (original: '{original}')")
+    # 3. Remplacement du nom du mois par son numéro
+    for name, number in months.items():
+        if name in date_string:
+            date_string = date_string.replace(name, number)
+            break
     else:
-        logging.getLogger(__name__).warning(f"Format inattendu pour la date: '{original}'")
+        logging.getLogger(__name__).warning(f"Mois non trouvé dans la date : '{date_string}'")
+        return None
 
-    return None
+    # 4. Extraction et conversion
+    parts = date_string.split()
+    if len(parts) < 4:
+        logging.getLogger(__name__).warning(f"Format de date inattendu après traitement : '{date_string}'")
+        return None
+
+    try:
+        # Format : jour mois annee heure:minute
+        date_to_parse = " ".join(parts[1:5])
+        dt_format = "%d %m %Y %H:%M"
+        dt_object = datetime.strptime(date_to_parse, dt_format)
+        return int(dt_object.timestamp() * 1000)
+    except (ValueError, IndexError) as e:
+        logging.getLogger(__name__).error(f"Échec final du parsing de la date '{date_string}': {e}")
+        return None
