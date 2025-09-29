@@ -1,4 +1,3 @@
-import locale
 import os
 from datetime import datetime
 import logging
@@ -12,7 +11,6 @@ from src.saving.save_data_csv import save_data
 
 
 def get_pool_results(driver, category):
-
     csv_filename = f"pool_{category}.csv"
     folder = "data"
     os.makedirs(folder, exist_ok=True)
@@ -50,7 +48,8 @@ def get_pool_results(driver, category):
             })
 
         except AttributeError as e:
-            logger.error(f"Erreur dans un conteneur (category={category}, competition={competition}, journee={day}): {e}")
+            logger.error(
+                f"Erreur dans un conteneur (category={category}, competition={competition}, journee={day}): {e}")
             continue
 
     all_data = pd.DataFrame(match_data)
@@ -59,7 +58,6 @@ def get_pool_results(driver, category):
 
 
 def extract_team_data(container, side_class):
-
     team_container = container.find("div", class_=side_class)
     if not team_container:
         return "Nom non disponible", None
@@ -85,15 +83,29 @@ def parse_date_to_milliseconds(date_string: str) -> Union[int, None]:
     """
     Convertit une date française de type "samedi 07 septembre 2024 à 14H00"
     en timestamp (millisecondes). Retourne None si invalide.
+    Cette version est plus robuste à la gestion des espaces.
     """
     if not date_string or not isinstance(date_string, str):
         logging.getLogger(__name__).warning("Date invalide ou vide fournie.")
         return None
 
-    # 1. Nettoyage et normalisation
-    date_string = date_string.lower().replace(" à ", " ").replace("h", ":")
+    original_date = date_string
 
-    # 2. Mapping des mois (robuste et indépendant de la locale)
+    # 1. Nettoyage et normalisation
+    # Remplacer les éléments textuels et normaliser tous les espaces en un seul
+    # " dimanche 28  septembre  2025 à  12H00 " -> ['dimanche', '28', 'septembre', '2025', '12:00']
+
+    date_string = date_string.lower().replace(" à ", " ").replace("h", ":")
+    parts = date_string.split()  # Sépare par n'importe quel espace
+
+    if len(parts) < 5:
+        logging.getLogger(__name__).warning(f"Format de date inattendu (pas assez de parties) : '{original_date}'")
+        return None
+
+    # parts devrait être ~ ['jour_semaine', 'jour', 'mois', 'annee', 'heure']
+    day, month_name, year, time_str = parts[1], parts[2], parts[3], parts[4]
+
+    # 2. Mapping des mois
     months = {
         'janvier': '01', 'février': '02', 'fevrier': '02', 'mars': '03',
         'avril': '04', 'mai': '05', 'juin': '06', 'juillet': '07',
@@ -101,27 +113,19 @@ def parse_date_to_milliseconds(date_string: str) -> Union[int, None]:
         'novembre': '11', 'décembre': '12', 'decembre': '12'
     }
 
-    # 3. Remplacement du nom du mois par son numéro
-    for name, number in months.items():
-        if name in date_string:
-            date_string = date_string.replace(name, number)
-            break
-    else:
-        logging.getLogger(__name__).warning(f"Mois non trouvé dans la date : '{date_string}'")
+    month_number = months.get(month_name)
+    if not month_number:
+        logging.getLogger(__name__).warning(
+            f"Mois non trouvé dans la date : '{month_name}' (original: '{original_date}')")
         return None
 
-    # 4. Extraction et conversion
-    parts = date_string.split()
-    if len(parts) < 4:
-        logging.getLogger(__name__).warning(f"Format de date inattendu après traitement : '{date_string}'")
-        return None
+    date_to_parse = f"{day} {month_number} {year} {time_str}"
+    dt_format = "%d %m %Y %H:%M"
 
     try:
-        # Format : jour mois annee heure:minute
-        date_to_parse = " ".join(parts[1:5])
-        dt_format = "%d %m %Y %H:%M"
         dt_object = datetime.strptime(date_to_parse, dt_format)
         return int(dt_object.timestamp() * 1000)
-    except (ValueError, IndexError) as e:
-        logging.getLogger(__name__).error(f"Échec final du parsing de la date '{date_string}': {e}")
+    except ValueError as e:
+        logging.getLogger(__name__).error(
+            f"Échec final du parsing pour '{date_to_parse}' (original: '{original_date}'): {e}")
         return None
