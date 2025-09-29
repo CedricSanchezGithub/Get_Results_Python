@@ -1,7 +1,5 @@
 import os
-from datetime import datetime
 import logging
-from typing import Union
 
 import pandas as pd
 from bs4 import BeautifulSoup
@@ -37,7 +35,7 @@ def get_pool_results(driver, category):
             match_link = container.get("href", None)
 
             match_data.append({
-                "match_date": parse_date_to_milliseconds(date_string),
+                "match_date": date_string,
                 "team_1_name": team_left_name,
                 "team_1_score": team_left_score,
                 "team_2_name": team_right_name,
@@ -77,55 +75,3 @@ def extract_team_data(container, side_class):
     )
 
     return team_name, team_score
-
-
-def parse_date_to_milliseconds(date_string: str) -> Union[int, None]:
-    """
-    Convertit une date française de type "samedi 07 septembre 2024 à 14H00"
-    en timestamp (millisecondes). Retourne None si invalide.
-    Cette version est plus robuste à la gestion des espaces.
-    """
-    if not date_string or not isinstance(date_string, str):
-        logging.getLogger(__name__).warning("Date invalide ou vide fournie.")
-        return None
-
-    original_date = date_string
-
-    # 1. Nettoyage et normalisation
-    # Remplacer les éléments textuels et normaliser tous les espaces en un seul
-    # " dimanche 28  septembre  2025 à  12H00 " -> ['dimanche', '28', 'septembre', '2025', '12:00']
-
-    date_string = date_string.lower().replace(" à ", " ").replace("h", ":")
-    parts = date_string.split()  # Sépare par n'importe quel espace
-
-    if len(parts) < 5:
-        logging.getLogger(__name__).warning(f"Format de date inattendu (pas assez de parties) : '{original_date}'")
-        return None
-
-    # parts devrait être ~ ['jour_semaine', 'jour', 'mois', 'annee', 'heure']
-    day, month_name, year, time_str = parts[1], parts[2], parts[3], parts[4]
-
-    # 2. Mapping des mois
-    months = {
-        'janvier': '01', 'février': '02', 'fevrier': '02', 'mars': '03',
-        'avril': '04', 'mai': '05', 'juin': '06', 'juillet': '07',
-        'août': '08', 'aout': '08', 'septembre': '09', 'octobre': '10',
-        'novembre': '11', 'décembre': '12', 'decembre': '12'
-    }
-
-    month_number = months.get(month_name)
-    if not month_number:
-        logging.getLogger(__name__).warning(
-            f"Mois non trouvé dans la date : '{month_name}' (original: '{original_date}')")
-        return None
-
-    date_to_parse = f"{day} {month_number} {year} {time_str}"
-    dt_format = "%d %m %Y %H:%M"
-
-    try:
-        dt_object = datetime.strptime(date_to_parse, dt_format)
-        return int(dt_object.timestamp() * 1000)
-    except ValueError as e:
-        logging.getLogger(__name__).error(
-            f"Échec final du parsing pour '{date_to_parse}' (original: '{original_date}'): {e}")
-        return None

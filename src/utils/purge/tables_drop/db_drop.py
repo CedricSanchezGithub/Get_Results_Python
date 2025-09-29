@@ -56,7 +56,7 @@ def create_table(table_name):
         CREATE TABLE matches (
             id BIGINT AUTO_INCREMENT PRIMARY KEY,
             pool_id VARCHAR(255) NOT NULL,
-            match_date BIGINT NULL, 
+            match_date VARCHAR(255) NULL, 
             team_1_name VARCHAR(255) NOT NULL,
             team_1_score INT NULL, 
             team_2_name VARCHAR(255) NOT NULL,
