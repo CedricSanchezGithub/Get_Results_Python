@@ -4,7 +4,6 @@ from src.navigation.cookies import cookies
 from src.navigation.navigation import navigation
 from src.saving.db_writer import db_writer_results
 from src.scraping.get_match_results import get_pool_results
-from src.utils.purge.tables_drop.db_drop import create_table
 from src.utils.purge_data import purge_pool_data
 
 
