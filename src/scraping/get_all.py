@@ -4,6 +4,7 @@ from src.navigation.cookies import cookies
 from src.navigation.navigation import navigation
 from src.saving.db_writer import db_writer_results
 from src.scraping.get_match_results import get_pool_results
+from src.utils.purge.csv_drop.purge_csv import purge_csv
 from src.utils.purge_data import purge_pool_data
 
 
@@ -15,9 +16,9 @@ def end_of_navigation():
 
 
 def get_all(driver, category):
-    """
-    Gère le processus complet : purge, navigation et récupération des résultats pour une catégorie.
-    """
+    logging.getLogger(__name__).info(f"Purge du CSV pour la catégorie '{category}'...")
+
+    purge_csv(category)
     purge_pool_data(category)
 
     time.sleep(2)
