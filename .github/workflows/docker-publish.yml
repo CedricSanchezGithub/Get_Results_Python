@@ -11,13 +11,24 @@ jobs:
     runs-on: ubuntu-latest
     environment: DockerHub
     steps:
-      # 1. Cloner le dépôt
+      # 1. Cloner le dépôt (optimisé)
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # Récupère uniquement le dernier commit pour accélérer
 
       # 2. Configurer QEMU pour la construction multi-architecture
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+
+      # 3. Configurer l'environnement Docker Buildx (correction de l'ordre)
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          # Active le driver qui offre de meilleures performances
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
 
       # 4. Se connecter à Docker Hub
       - name: Login to Docker Hub
@@ -26,11 +37,17 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 3. Configurer l'environnement Docker Buildx
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # 5. Préparer les métadonnées pour Docker
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: cedsanc/getresultscraper
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ github.run_number }}-${{ github.sha }}
 
-      # 5. Construire et pousser l'image Docker
+      # 6. Construire et pousser l'image Docker (avec cache)
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -38,6 +55,11 @@ jobs:
           file: ./Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: |
-            cedsanc/getresultscraper:latest
-            cedsanc/getresultscraper:${{ github.run_number }}-${{ github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
+          # Utilisation du cache pour accélérer les builds
+          cache-from: type=gha,scope=${{ github.workflow }}
+          cache-to: type=gha,scope=${{ github.workflow }},mode=max
+          # Optimisations de performance
+          provenance: false  # Accélère les builds en désactivant la provenance SBOM
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
