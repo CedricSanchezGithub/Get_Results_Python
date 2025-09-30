@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from src.config import DATA_DIR
 from src.scraping.get_competition_and_day import get_day_via_url, get_competition_via_url
 from src.saving.save_data_csv import save_data
+from src.utils.format_date import format_date
 
 
 def get_pool_results(driver, category):
@@ -29,7 +30,28 @@ def get_pool_results(driver, category):
     for container in main_containers:
         try:
             date_container = container.find("p", class_="block_date__dYMQX")
-            date_string = date_container.text.strip() if date_container else "Aucune date"
+            if date_container is None:
+                logger.warning(
+                    f"Date: balise <p class='block_date__dYMQX'> introuvable (category={category}, competition={competition}, journee={day})"
+                )
+                date_string = "Aucune date"
+            else:
+                raw = (date_container.text or "").strip()
+                if not raw:
+                    logger.warning(
+                        f"Date: balise présente mais vide (category={category}, competition={competition}, journee={day})"
+                    )
+                    date_string = "Aucune date"
+                else:
+                    date_string = raw
+                    logger.info(f"Date récupérée (brute)='{date_string}' (category={category}, competition={competition}, journee={day})")
+                    # Tentative de parsing pour journaliser le format; n'altère pas la valeur stockée
+                    iso = format_date(date_string)
+                    if iso:
+                        logger.info(f"Date parsée en ISO='{iso}'")
+                    else:
+                        logger.warning("Impossible de parser la date (voir logs format_date pour détails)")
+
             team_left_name, team_left_score = extract_team_data(container, "styles_left__svLY+")
             team_right_name, team_right_score = extract_team_data(container, "styles_right__wdfIf")
             match_link = container.get("href", None)
