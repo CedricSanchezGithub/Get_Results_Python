@@ -1,6 +1,6 @@
 # Fichier : src/saving/db_logger.py
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from src.database.db_connector import get_connection
 
 def create_log_entry() -> int:
@@ -13,8 +13,9 @@ def create_log_entry() -> int:
     log_id = None
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, (datetime.now(),))
-            log_id = cursor.lastrowid  # Récupère l'ID de la ligne insérée
+            now_utc = datetime.now(timezone.utc)
+            cursor.execute(sql, (now_utc,))
+            log_id = cursor.lastrowid
         conn.commit()
         logging.getLogger(__name__).info(f"Created log entry with ID: {log_id}")
         return log_id
@@ -42,7 +43,8 @@ def update_log_entry(log_id: int, status: str, duration: float, message: str = N
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
-            cursor.execute(sql, (datetime.now(), status, duration, message, log_id))
+            now_utc = datetime.now(timezone.utc)
+            cursor.execute(sql, (now_utc, status, duration, message, log_id))
         conn.commit()
         logging.getLogger(__name__).info(f"Updated log entry {log_id} with status: {status}")
     except Exception as e:
