@@ -85,7 +85,7 @@ def db_writer_results(category):
                         #    Cette étape isole la logique de nettoyage des données.
                         data_tuple = (
                             category,
-                            row.get('match_date'),
+                            _to_str_or_none(row.get('match_date')),
                             _to_str_or_none(row.get('team_1_name')),
                             _to_int_or_none(row.get('team_1_score')),
                             _to_str_or_none(row.get('team_2_name')),
