@@ -4,8 +4,9 @@ FROM python:3.10-slim
 # 2. Set le répertoire de travail
 WORKDIR /app
 
-# 3. Installer Chromium et ses dépendances (meilleur contrôle des paquets
+# 3. Installer les dépendances système, Y COMPRIS les locales
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    locales \
     chromium \
     chromium-driver \
     xvfb \
@@ -13,23 +14,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# 4. Variables d'environnement
+# 4. Générer et configurer la locale française
+RUN echo "fr_FR.UTF-8 UTF-8" >> /etc/locale.gen && \
+    locale-gen fr_FR.UTF-8 && \
+    update-locale LANG=fr_FR.UTF-8
+
+# 5. Variables d'environnement (incluant la langue)
+ENV LANG fr_FR.UTF-8
+ENV LANGUAGE fr_FR:fr
+ENV LC_ALL fr_FR.UTF-8
 ENV CHROME_BIN=/usr/bin/chromium \
     CHROMEDRIVER_PATH=/usr/bin/chromedriver \
     PATH="/usr/bin:${PATH}"
 
-# 5. Copier les fichiers du projet en une seule commande
+# 6. Copier les fichiers du projet
 COPY . /app
 
-# 6. Installer les dépendances Python
+# 7. Installer les dépendances Python
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# 7. Donner des droits
+# 8. Donner des droits
 RUN chmod +x scraping_scheduler.py
 
-# 8. Exposer le port (ex: API Flask)
+# 9. Exposer le port
 EXPOSE 5000
 
-# 9. Commande par défaut
+# 10. Commande par défaut
 CMD ["python", "scraping_scheduler.py"]

@@ -2,18 +2,11 @@ from datetime import datetime
 import locale
 import logging
 
-from datetime import datetime
-import locale
-import logging
-
-from datetime import datetime
-import locale
-import logging
-
 
 def format_date(date_string: str):
     """
     Tente de convertir une chaîne de caractères en objet datetime.
+    - Gère les préfixes comme "Le" ou les jours de la semaine.
     - Retourne un objet datetime si le parsing réussit.
     - Retourne None si la chaîne est invalide ou "Date non disponible".
     """
@@ -24,29 +17,29 @@ def format_date(date_string: str):
 
     logger.debug(f"format_date: brut='{date_string}'")
 
-    # Logique pour définir la locale française (essentiel pour %B)
-    locale_set = False
-    for loc in ("fr_FR.utf8", "fr_FR.UTF-8", "fr_FR"):
-        try:
-            locale.setlocale(locale.LC_TIME, loc)
-            locale_set = True
-            break
-        except locale.Error:
-            continue
-    if not locale_set:
-        logger.warning("format_date: impossible de définir la locale FR. Le parsing des mois peut échouer.")
+    # Essayer de définir la locale française
+    try:
+        locale.setlocale(locale.LC_TIME, "fr_FR.UTF-8")
+    except locale.Error:
+        logger.warning("format_date: impossible de définir la locale fr_FR.UTF-8. Le parsing peut échouer.")
 
     try:
-        # Nettoyage et parsing
-        # Exemple: "Le 29 septembre 2025 à 20H30"
-        date_cleaned = date_string.lower().replace("le ", "").replace(" à ", " ").replace("h", ":")
+        parts = date_string.split()
 
-        # Format attendu : "29 septembre 2025 20:30"
+        # Ignorer le premier mot si c'est un jour de la semaine ou "Le"
+        if parts[0].lower() in ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi", "dimanche", "le"]:
+            parts = parts[1:]
+
+        # Reconstruire la chaîne et nettoyer
+        date_cleaned = " ".join(parts)
+        date_cleaned = date_cleaned.replace(" à ", " ").replace("H", ":")
+
         fmt = "%d %B %Y %H:%M"
-
         date_obj = datetime.strptime(date_cleaned, fmt)
+
         logger.info(f"format_date: parsing réussi pour '{date_string}' -> {date_obj}")
         return date_obj
+
     except (ValueError, IndexError) as e:
-        logger.warning(f"format_date: échec du parsing pour brut='{date_string}': {e}")
+        logger.warning(f"format_date: échec du parsing pour la chaîne nettoyée '{date_cleaned}': {e}")
         return None
