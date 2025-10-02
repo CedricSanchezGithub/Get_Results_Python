@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 from src.config import DATA_DIR
 from src.scraping.get_competition_and_day import get_day_via_url, get_competition_via_url
 from src.saving.save_data_csv import save_data
+from src.utils.format_date import format_date
+
 
 def get_pool_results(driver, category):
     csv_filename = f"pool_{category}.csv"
@@ -39,9 +41,10 @@ def get_pool_results(driver, category):
             team_left_name, team_left_score = extract_team_data(container, "styles_left__svLY+")
             team_right_name, team_right_score = extract_team_data(container, "styles_right__wdfIf")
             match_link = container.get("href", None)
+            formatted_date = format_date(date_string)
 
             match_data.append({
-                "match_date": date_string,
+                "match_date": formatted_date,
                 "team_1_name": team_left_name,
                 "team_1_score": team_left_score,
                 "team_2_name": team_right_name,
