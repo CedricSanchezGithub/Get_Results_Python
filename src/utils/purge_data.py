@@ -13,7 +13,10 @@ def purge_data(category):
 from src.database.db_connector import get_connection
 
 def purge_pool_data(pool_id):
-    """Supprime les anciens résultats pour une poule spécifique de la table 'matches'."""
+    """
+    Supprime les anciens résultats pour une poule spécifique de la table 'matches'.
+    Laisse remonter les exceptions SQL pour que l'appelant puisse annuler le job.
+    """
     sql = "DELETE FROM matches WHERE pool_id = %s"
     connection = get_connection()
     try:
@@ -22,6 +25,8 @@ def purge_pool_data(pool_id):
             connection.commit()
             logging.getLogger(__name__).info(f"Données purgées pour la poule '{pool_id}' dans la table 'matches'.")
     except Exception as e:
+        # CORRECT : On log l'erreur ET on la relève
         logging.getLogger(__name__).error(f"Erreur lors de la purge pour la poule '{pool_id}': {e}")
+        raise # Relève l'exception
     finally:
         connection.close()

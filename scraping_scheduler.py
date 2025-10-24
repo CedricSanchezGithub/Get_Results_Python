@@ -12,7 +12,7 @@ from src.utils.logging_config import configure_logging
 
 # Application Flask (optionnelle si vous voulez un endpoint HTTP)
 app = Flask(__name__)
-
+APP_VERSION = "1.1.0"
 configure_logging()
 logging.getLogger('apscheduler').setLevel(logging.INFO)
 
@@ -136,6 +136,10 @@ def health():
 
 if __name__ == '__main__':
     # Configuration d'APScheduler
+    logging.getLogger(__name__).info(
+        f"--- Démarrage GetResults Scraper v{APP_VERSION} ---"
+    )
+    logging.getLogger(__name__).info("Scheduler configuré pour 'cron' à 00:00.")
     scheduler = BackgroundScheduler()
     # Planifie l'exécution de 'scraping_job' tous les jours à 00:00
     scheduler.add_job(scraping_job, 'cron', hour=0, minute=0, id='daily_scraping')
