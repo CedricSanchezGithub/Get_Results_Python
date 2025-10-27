@@ -6,7 +6,6 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from src.scraping.get_all import get_all
-from src.utils.purge_data import purge_pool_data
 from src.utils.sources.urls import urls
 from env import is_raspberry_pi
 
@@ -42,19 +41,13 @@ def run_daily_scraping():
 
         for entry in urls:
             category = entry["category"]
-            try:
-                logger.info(f"Début scraping category={category}...")
-                driver.get(entry["url"])
-                get_all(driver, category)
-                logger.info(f"Fin scraping category={category}")
-            except Exception as e:
-                logger.exception(f"Erreur lors du traitement de la category={category}: {e}")
-                job_status = "PARTIAL_SUCCESS"
-                error_message = f"Failed on category {category}: {e}"
-                continue
+            logger.info(f"Début traitement category={category}...")
+            driver.get(entry["url"])
+            get_all(driver, category)
+            logger.info(f"Fin traitement category={category}")
 
     except Exception as e:
-        logger.exception(f"Erreur fatale dans le job de scraping: {e}")
+        logger.exception(f"Erreur fatale dans le job de scraping (catégorie: {category if 'category' in locals() else 'inconnue'}) : {e}")
         job_status = "FAILURE"
         error_message = str(e)
 
@@ -64,7 +57,7 @@ def run_daily_scraping():
             logger.info("Driver fermé.")
 
         elapsed_time = time.time() - start_time
-        logger.info(f"Job scraping: fin — durée totale {elapsed_time:.2f} s")
+        logger.info(f"Job scraping: fin — statut final {job_status} — durée totale {elapsed_time:.2f} s")
 
         update_log_entry(
             log_id=log_id,
