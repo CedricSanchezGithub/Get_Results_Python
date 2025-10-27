@@ -45,7 +45,6 @@ def run_daily_scraping():
             try:
                 logger.info(f"Début scraping category={category}...")
                 driver.get(entry["url"])
-                purge_pool_data(category)
                 get_all(driver, category)
                 logger.info(f"Fin scraping category={category}")
             except Exception as e:

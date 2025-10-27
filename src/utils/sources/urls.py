@@ -18,23 +18,23 @@ urls = [
     #{"category": "11f", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2024-2025-20/departemental/11-f-championnat-26230/poule-154436/journee-1/"},
 
     {"category": "SF", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-f-prenationale-28365/poule-169120/journee-1/"},
-    {"category": "SF", "phase": "Coupe de France", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/coupe-de-france/coupe-de-france-regionale-feminine-2025-26-29113/poule-173664/"},
-    {"category": "-18F", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-f-2e-division-28369/poule-172464/"},
-    {"category": "-15F1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-1ere-division-28372/poule-169159/"},
-    {"category": "-15F2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-2e-division-28373/poule-172423/"},
-    {"category": "-13F1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-13-feminins-28964/"},
-    {"category": "-13F1", "phase": "Coupe de l'Hérault", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/coupe-de-l-herault-13-f-29043/"},
-    {"category": "-11F", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-11-feminins-28963/"},
+    {"category": "-18F", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-f-2e-division-28369/poule-172464/journee-1/"},
+    {"category": "-15F1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-1ere-division-28372/poule-169159/journee-1/"},
+    {"category": "-15F2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-2e-division-28373/poule-172423/journee-1/"},
+    {"category": "-13F1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-13-feminins-28964/journee-1/"},
+    {"category": "-11F", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-11-feminins-28963/journee-1/"},
 
-    {"category": "SG", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-m-preregionale-1ere-division-28343/poule-169284/"},
-    {"category": "-18M2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-m-3e-division-28350/poule-172487/"},
-    {"category": "-18M1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-m-2e-division-28349/poule-169141/"},
-    {"category": "-15M1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-m-2e-division-28355/poule-169153/"},
-    {"category": "-15M2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-m-3e-division-28356/poule-172527/"},
-    {"category": "-13M1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-13-masculins-28913/poule-172095/"},
-    {"category": "-13M2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-13-masculins-28913/poule-175328/"},
-    {"category": "-11M", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-11-masculins-28912/poule-175315/"},
+    {"category": "SG", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-m-preregionale-1ere-division-28343/poule-169284/journee-1/"},
+    {"category": "-18M2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-m-3e-division-28350/poule-172487/journee-1/"},
+    {"category": "-18M1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-m-2e-division-28349/poule-169141/journee-1/"},
+    {"category": "-15M1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-m-2e-division-28355/poule-169153/journee-1/"},
+    {"category": "-15M2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-m-3e-division-28356/poule-172527/journee-1/"},
+    {"category": "-13M1", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-13-masculins-28913/poule-172095/journee-1/"},
+    {"category": "-13M2", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-13-masculins-28913/poule-175328/journee-1/"},
+    {"category": "-11M", "phase": "Championnat", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-11-masculins-28912/poule-175315/journee-1/"},
 ]
+    #{"category": "-13F1", "phase": "Coupe de l'Hérault", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/coupe-de-l-herault-13-f-29043/"},
+    #{"category": "SF", "phase": "Coupe de France", "url": "https://www.ffhandball.fr/competitions/saison-2025-2026-21/coupe-de-france/coupe-de-france-regionale-feminine-2025-26-29113/poule-173664/"},
 
 #il manque les liens de :
 #-11M

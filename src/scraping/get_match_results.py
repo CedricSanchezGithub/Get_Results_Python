@@ -1,20 +1,10 @@
-import os
 import logging
-
-import pandas as pd
 from bs4 import BeautifulSoup
-
-from src.config import DATA_DIR
 from src.scraping.get_competition_and_day import get_day_via_url, get_competition_via_url
-from src.saving.save_data_csv import save_data
 from src.utils.format_date import format_date
 
 
 def get_pool_results(driver, category):
-    csv_filename = f"pool_{category}.csv"
-    os.makedirs(DATA_DIR, exist_ok=True)
-    csv_filepath = os.path.join(DATA_DIR, csv_filename)
-
     logger = logging.getLogger(__name__)
     soup = BeautifulSoup(driver.page_source, "html.parser")
     competition = get_competition_via_url(driver)
@@ -23,7 +13,7 @@ def get_pool_results(driver, category):
     main_containers = soup.find_all(class_="styles_rencontre__9O0P0")
     if not main_containers:
         logger.warning("Aucune balise trouvée pour la classe 'styles_rencontre__9O0P0'")
-        return
+        return []
 
     match_data = []
 
@@ -54,13 +44,15 @@ def get_pool_results(driver, category):
                 "journee": day
             })
 
-        except AttributeError as e:
+        except Exception as e:
+
             logger.error(
-                f"Erreur dans un conteneur (category={category}, competition={competition}, journee={day}): {e}")
+                f"Erreur lors du traitement d'un conteneur (category={category}, competition={competition}, journee={day}): {e}",
+                exc_info=True
+            )
             continue
 
-    all_data = pd.DataFrame(match_data)
-    save_data(csv_filepath, all_data)
+    return match_data
 
 
 def extract_team_data(container, side_class):
@@ -68,18 +60,10 @@ def extract_team_data(container, side_class):
     if not team_container:
         return "Nom non disponible", None
 
-    # Nom de l'équipe
-    team_name = (
-        team_container.find("div", class_="styles_teamName__aH4Gu").text.strip()
-        if team_container.find("div", class_="styles_teamName__aH4Gu")
-        else "Nom non disponible"
-    )
+    team_name_element = team_container.find("div", class_="styles_teamName__aH4Gu")
+    team_name = team_name_element.text.strip() if team_name_element else "Nom non disponible"
 
-    # Score de l'équipe
-    team_score = (
-        team_container.find("div", class_="styles_score__ELPXO").text.strip()
-        if team_container.find("div", class_="styles_score__ELPXO")
-        else "-"
-    )
+    team_score_element = team_container.find("div", class_="styles_score__ELPXO")
+    team_score = team_score_element.text.strip() if team_score_element else "-"
 
     return team_name, team_score
