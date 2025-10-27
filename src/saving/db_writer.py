@@ -1,31 +1,5 @@
-import csv
 import logging
 from src.database.db_connector import get_connection
-
-
-def db_writer_ranking(category):
-    csv_file = "data/ranking.csv"
-    table_name = f"pool_{category}"
-    sql = f"""
-    INSERT INTO {table_name} (position, club_name, points)
-    VALUES (%s, %s, %s)
-    """
-
-    conn = get_connection()
-    try:
-        with conn.cursor() as cursor:
-            with open(csv_file, newline='', encoding='utf-8') as file:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    cursor.execute(sql, (row['position'], row['club_name'], row['points']))
-
-            conn.commit()
-            logging.info(f"Classement inséré avec succès depuis {csv_file} dans {table_name}")
-
-    except Exception as e:
-        logging.error(f"Erreur lors de l'insertion du ranking dans '{table_name}' : {e}")
-    finally:
-        conn.close()
 
 
 def _to_int_or_none(value):
