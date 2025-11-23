@@ -2,62 +2,48 @@ import time
 import logging
 from src.saving.db_logger import create_log_entry, update_log_entry
 from src.utils.logging_config import configure_logging
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
+# Plus d'import Selenium !
 from src.scraping.get_all import get_all
 from src.utils.sources.urls import urls
-from env import is_raspberry_pi
 
-chrome_options = Options()
-chrome_options.add_argument("--headless")
-chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
-chrome_options.add_argument("--disable-gpu")
-chrome_options.add_argument("--window-size=1920x1080")
 
+# from env import is_raspberry_pi (Devenu inutile pour Selenium, mais peut servir ailleurs)
 
 def run_daily_scraping():
     configure_logging()
     logger = logging.getLogger(__name__)
 
     log_id = create_log_entry()
-
     start_time = time.time()
-    logger.info("Job scraping: début")
+    logger.info("Job scraping (Mode Requests): début")
 
-    driver = None
     job_status = "SUCCESS"
     error_message = None
 
     try:
-        if is_raspberry_pi():
-            logger.info("Environnement: Raspberry Pi (ARM64)")
-            service = Service("/usr/bin/chromedriver")
-            driver = webdriver.Chrome(service=service, options=chrome_options)
-        else:
-            logger.info("Environnement: développement")
-            driver = webdriver.Chrome(options=chrome_options)
+        # Plus de détection Raspberry Pi ni de Driver Chrome
 
+        # Boucle principale
         for entry in urls:
             category = entry["category"]
-            logger.info(f"Début traitement category={category}...")
-            driver.get(entry["url"])
-            get_all(driver, category)
-            logger.info(f"Fin traitement category={category}")
+            target_url = entry["url"]
+
+            try:
+                get_all(target_url, category)
+            except Exception as e:
+                logger.exception(f"Erreur critique sur la catégorie {category}: {e}")
+                job_status = "PARTIAL_SUCCESS"
+                error_message = f"Erreur sur {category}"
+                continue
 
     except Exception as e:
-        logger.exception(f"Erreur fatale dans le job de scraping (catégorie: {category if 'category' in locals() else 'inconnue'}) : {e}")
+        logger.exception(f"Erreur fatale globale: {e}")
         job_status = "FAILURE"
         error_message = str(e)
 
     finally:
-        if driver:
-            driver.quit()
-            logger.info("Driver fermé.")
-
         elapsed_time = time.time() - start_time
-        logger.info(f"Job scraping: fin — statut final {job_status} — durée totale {elapsed_time:.2f} s")
+        logger.info(f"Job scraping terminé en {elapsed_time:.2f} s. Statut: {job_status}")
 
         update_log_entry(
             log_id=log_id,
@@ -65,3 +51,7 @@ def run_daily_scraping():
             duration=elapsed_time,
             message=error_message
         )
+
+
+if __name__ == "__main__":
+    run_daily_scraping()
