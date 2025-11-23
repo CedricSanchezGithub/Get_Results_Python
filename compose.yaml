@@ -25,7 +25,7 @@ services:
       start_period: 20s
 
   scraper:
-    image: cedsanc/getresultscraper
+    image: getresultscraperdev
     container_name: get_results_scraper
     depends_on:
       mysql_getresults:
@@ -61,6 +61,23 @@ services:
     networks:
       - getresults-network
 
+  admin_panel:
+      image: cedsanc/get-results-panel:latest
+      container_name: get_results_admin
+      restart: always
+      depends_on:
+        mysql_getresults:
+          condition: service_healthy
+      env_file:
+        - .env
+      environment:
+        # Construction de l'URL Prisma via les variables du service MySQL
+        # Format: mysql://USER:PASSWORD@HOST:PORT/DATABASE
+        - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql_getresults:3306/${MYSQL_DATABASE}
+      ports:
+        - "3000:3000"
+      networks:
+        - getresults-network
 volumes:
   mysql-data:
 
