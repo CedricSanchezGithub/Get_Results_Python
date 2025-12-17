@@ -15,6 +15,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - getresults-network
     healthcheck:
@@ -25,7 +26,7 @@ services:
       start_period: 20s
 
   scraper:
-    image: getresultscraperdev
+    image: cedsanc/getresultscraper:latest
     container_name: get_results_scraper
     depends_on:
       mysql_getresults:
@@ -61,23 +62,26 @@ services:
     networks:
       - getresults-network
 
-  admin_panel:
-      image: cedsanc/get-results-panel:latest
-      container_name: get_results_admin
-      restart: always
-      depends_on:
-        mysql_getresults:
-          condition: service_healthy
-      env_file:
-        - .env
-      environment:
-        # Construction de l'URL Prisma via les variables du service MySQL
-        # Format: mysql://USER:PASSWORD@HOST:PORT/DATABASE
-        - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@mysql_getresults:3306/${MYSQL_DATABASE}
-      ports:
-        - "3000:3000"
-      networks:
-        - getresults-network
+  # --- BACKEND SPRING BOOT ---
+  backend:
+    image: cedsanc/getresultsbackend:latest
+    container_name: getresults_backend
+    restart: always
+    depends_on:
+      mysql_getresults:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql_getresults:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
+      - SPRING_API_KEY=${SPRING_API_KEY}
+    networks:
+      - getresults-network
+    env_file:
+      - .env
+
 volumes:
   mysql-data:
 

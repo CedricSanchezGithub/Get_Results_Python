@@ -21,11 +21,19 @@ def db_writer_results(match_data_list: list, category: str):
         return
 
     table_name = "matches"
+
+    # Si le match existe (Date + Team1 + Team2 identiques), on met à jour les scores et infos
     insert_sql = f"""
         INSERT INTO {table_name} 
             (pool_id, match_date, team_1_name, team_1_score, team_2_name, team_2_score, 
              match_link, competition, round)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            team_1_score = VALUES(team_1_score),
+            team_2_score = VALUES(team_2_score),
+            match_link = VALUES(match_link),
+            round = VALUES(round),
+            pool_id = VALUES(pool_id)
     """
 
     connection = get_connection()
@@ -36,6 +44,7 @@ def db_writer_results(match_data_list: list, category: str):
     data_to_insert = []
     for row in match_data_list:
         try:
+
             data_tuple = (
                 category,
                 _to_str_or_none(row.get('match_date')),
@@ -65,10 +74,9 @@ def db_writer_results(match_data_list: list, category: str):
             inserted_count = affected_rows if affected_rows is not None else 0
 
         connection.commit()
-
         logging.info(
-            f"Insertion transactionnelle terminée pour la poule '{category}' : "
-            f"{inserted_count}/{len(data_to_insert)} lignes insérées dans '{table_name}'."
+            f"Traitement terminé pour la poule '{category}' : "
+            f"{inserted_count} opérations (Insertions ou Mises à jour) sur {len(data_to_insert)} items."
         )
 
     except Exception as e:
