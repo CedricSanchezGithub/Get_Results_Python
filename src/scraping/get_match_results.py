@@ -6,8 +6,6 @@ import re
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-from src.scraping.get_competition_and_day import get_competition_via_url
-
 
 def fetch_html(url):
     """Récupère le HTML brut via requests avec des headers navigateur."""
@@ -25,11 +23,25 @@ def fetch_html(url):
 
 def get_matches_from_url(url, category):
     """
-    Scrape une URL FFHandball.
-    Retourne :
-      - match_data : Liste des matchs trouvés.
-      - journees_meta : Liste brute des journées disponibles (pour la pagination).
+    Scrape les résultats des matchs depuis une URL FFHandball.
+
+    Cette fonction extrait les données des rencontres via le composant JSON 'competitions---rencontre-list'.
+
+    Règles métier appliquées :
+      - Filtrage strict : Tout match sans date valide ou avec une date "non disponible" est
+        immédiatement ignoré pour garantir l'intégrité de la base de données (prévention des NULLs).
+      - Pagination : Tente de récupérer les métadonnées des autres journées via les sélecteurs de poule.
+
+    Args:
+        url (str): L'URL cible de la journée à scraper.
+        category (str): La catégorie (ex: 'SF', '-18F') associée à ces matchs.
+
+    Returns:
+        tuple: (match_data, journees_meta)
+            - match_data (list): Liste de dictionnaires des matchs valides.
+            - journees_meta (list): Liste brute des journées disponibles pour la navigation.
     """
+
     logger = logging.getLogger(__name__)
     html_content = fetch_html(url)
 
@@ -38,13 +50,9 @@ def get_matches_from_url(url, category):
 
     soup = BeautifulSoup(html_content, "html.parser")
 
-    # 1. Extraction des Matchs (via competitions---rencontre-list)
     match_data = []
     rencontre_component = soup.find("smartfire-component", attrs={"name": "competitions---rencontre-list"})
 
-    # Récupération contextuelle (Competition / Journée)
-    # On essaie de parser l'URL, sinon on prendra ce qu'il y a dans le JSON
-    # Le numéro de journée est souvent dans l'URL ex: /journee-3/
     current_journee_match = re.search(r"journee-(\d+)", url)
     current_journee = current_journee_match.group(1) if current_journee_match else None
 
@@ -55,7 +63,6 @@ def get_matches_from_url(url, category):
             rencontres = json_data.get("rencontres", [])
 
             for match in rencontres:
-                # Parsing date
                 raw_date = match.get("date")
                 formatted_date = None
                 if raw_date:
@@ -63,6 +70,11 @@ def get_matches_from_url(url, category):
                         formatted_date = datetime.fromisoformat(raw_date).strftime("%Y-%m-%d %H:%M:%S")
                     except ValueError:
                         pass
+                if not formatted_date:
+                    logger.warning(
+                        f"Match ignoré (Date absente) : {match.get('equipe1Libelle')} vs {match.get('equipe2Libelle')}")
+                    continue
+                # ---------------------------
 
                 match_entry = {
                     "match_date": formatted_date,
@@ -71,41 +83,31 @@ def get_matches_from_url(url, category):
                     "team_2_name": match.get("equipe2Libelle", "Nom non disponible"),
                     "team_2_score": match.get("equipe2Score") if match.get("equipe2Score") != "" else None,
                     "match_link": None,
-                    "competition": category,  # On utilise la catégorie comme clé de compétition principale ici
+                    "competition": category,
                     "journee": match.get("journeeNumero", current_journee)
                 }
                 match_data.append(match_entry)
+
         except Exception as e:
             logger.error(f"Erreur parsing JSON rencontres pour {category}: {e}")
 
-    # 2. Extraction des Journées (pour la pagination future)
-    # On cherche le composant qui contient la liste des journées (souvent poule-selector ou journee-selector)
     journees_meta = []
     selector_component = soup.find("smartfire-component", attrs={"name": "competitions---poule-selector"})
 
-    # Fallback si poule-selector n'existe pas (parfois journee-selector)
     if not selector_component:
         selector_component = soup.find("smartfire-component", attrs={"name": "competitions---journee-selector"})
 
     if selector_component:
         try:
             raw_attr = selector_component.get("attributes", "{}")
-            # Parfois "journees" est une string JSON échappée à l'intérieur du JSON...
-            # Il faut inspecter la structure. Souvent: attributes='{"poule": {"journees": "[...]"}}'
-            # Ou attributes='{"journees": "[...]"}'
 
-            # Décodage niveau 1
             main_json = json.loads(html.unescape(raw_attr))
-
-            # Recherche de la clé "journees"
-            # Parfois directe, parfois dans "poule" ou "selected_poule"
             raw_journees = main_json.get("journees")
             if not raw_journees and "poule" in main_json:
                 raw_journees = main_json["poule"].get("journees")
             if not raw_journees and "selected_poule" in main_json:
                 raw_journees = main_json["selected_poule"].get("journees")
 
-            # Si raw_journees est une string (double encoding fréquent chez Smartfire), on re-parse
             if isinstance(raw_journees, str):
                 journees_meta = json.loads(raw_journees)
             elif isinstance(raw_journees, list):
