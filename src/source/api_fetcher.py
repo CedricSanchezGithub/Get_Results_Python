@@ -7,11 +7,11 @@ import time
 def get_urls_from_api():
     """
     Récupère les compétitions actives depuis l'API Backend.
-    Gère les tentatives de reconnexion si le backend n'est pas encore prêt (fréquent au démarrage de Dokploy).
+    Gère les tentatives de reconnexion si le backend n'est pas encore prêt.
     """
     logger = logging.getLogger(__name__)
 
-    api_url = os.getenv("API_URL", "http://get-results-backend-cfexgy:8081/api/competitions/active")
+    api_url = os.getenv("API_URL", "http://get-results-backend-cfexgy:8081/api/competitions")
 
     max_retries = 3
     retry_delay = 5  # secondes
