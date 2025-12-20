@@ -11,7 +11,7 @@ def get_urls_from_api():
     """
     logger = logging.getLogger(__name__)
 
-    api_url = os.getenv("API_URL", "http://get-results-backend-cfexgy:8081/api/competitions")
+    api_url = os.getenv("API_URL")
 
     max_retries = 3
     retry_delay = 5  # secondes
