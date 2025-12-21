@@ -1,3 +1,5 @@
+import os
+
 import requests
 import json
 import html
@@ -47,6 +49,25 @@ def get_matches_from_url(url, category):
 
     if not html_content:
         return [], []
+
+    try:
+        # Création du dossier de debug s'il n'existe pas
+        debug_dir = "debug_html"
+        os.makedirs(debug_dir, exist_ok=True)
+
+        # Génération d'un nom de fichier unique : categorie_timestamp.html
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        # On nettoie la catégorie pour qu'elle soit valide dans un nom de fichier
+        safe_cat = re.sub(r'[^a-zA-Z0-9]', '_', category)
+        filename = os.path.join(debug_dir, f"scrape_{safe_cat}_{timestamp}.html")
+
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+        logger.info(f"🔍 [DEBUG] HTML brut sauvegardé : {filename}")
+
+    except Exception as e:
+        logger.warning(f"⚠️ Impossible de sauvegarder le fichier de debug : {e}")
 
     soup = BeautifulSoup(html_content, "html.parser")
 
