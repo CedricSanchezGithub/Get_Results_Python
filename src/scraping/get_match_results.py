@@ -8,6 +8,8 @@ import re
 from bs4 import BeautifulSoup
 from datetime import datetime
 
+from src.config import DATA_DIR
+
 
 def fetch_html(url):
     """Récupère le HTML brut via requests avec des headers navigateur."""
@@ -52,7 +54,7 @@ def get_matches_from_url(url, category):
 
     try:
         # Création du dossier de debug s'il n'existe pas
-        debug_dir = "debug_html"
+        debug_dir = os.path.join(DATA_DIR, "debug_html")
         os.makedirs(debug_dir, exist_ok=True)
 
         # Génération d'un nom de fichier unique : categorie_timestamp.html
