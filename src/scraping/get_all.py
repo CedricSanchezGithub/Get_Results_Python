@@ -45,9 +45,6 @@ def get_all(url_start, category):
 
             target_url = base_url_pattern.format(num)
 
-            # Petit log pour suivre
-            # logger.debug(f"Scraping journée {num}...")
-
             page_matches, _ = get_matches_from_url(target_url, category)
             if page_matches:
                 all_match_data.extend(page_matches)

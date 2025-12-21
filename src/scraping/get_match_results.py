@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 from src.config import DATA_DIR
+from src.utils.format_date import format_date
 
 
 def fetch_html(url):
@@ -92,12 +93,14 @@ def get_matches_from_url(url, category):
                     try:
                         formatted_date = datetime.fromisoformat(raw_date).strftime("%Y-%m-%d %H:%M:%S")
                     except ValueError:
-                        pass
+                        dt_obj = format_date(raw_date)
+                        if dt_obj:
+                            formatted_date = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
                 if not formatted_date:
                     logger.warning(
-                        f"Match ignoré (Date absente) : {match.get('equipe1Libelle')} vs {match.get('equipe2Libelle')}")
+                        f"⚠️ Match ignoré (Date invalide: '{raw_date}') : {match.get('equipe1Libelle')} vs {match.get('equipe2Libelle')}"
+                    )
                     continue
-                # ---------------------------
 
                 match_entry = {
                     "match_date": formatted_date,
