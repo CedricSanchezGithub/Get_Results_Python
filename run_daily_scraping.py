@@ -1,9 +1,10 @@
 import time
 import logging
 from src.saving.db_logger import create_log_entry, update_log_entry
-from src.source.api_fetcher import get_urls_from_api
 from src.utils.logging_config import configure_logging
 from src.scraping.get_all import get_all
+from src.utils.sources.api_fetcher import get_urls_from_api
+
 
 def run_daily_scraping():
     # 1. Configuration initiale
