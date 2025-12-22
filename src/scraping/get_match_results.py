@@ -7,9 +7,10 @@ import logging
 import re
 from bs4 import BeautifulSoup
 from datetime import datetime
-
+from src.utils.format_date import format_date
 from src.config import DATA_DIR
 from dateutil import parser
+
 
 def fetch_html(url):
     """Récupère le HTML brut via requests avec des headers navigateur."""
@@ -87,13 +88,14 @@ def get_matches_from_url(url, category):
 
             for match in rencontres:
                 raw_date = match.get("date")
+                logger.info("raw_date --->>>> ", raw_date, "")
                 formatted_date = None
                 if raw_date:
                     try:
                         dt_obj = parser.parse(raw_date)
                         formatted_date = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
                     except (ValueError, TypeError):
-                        from src.utils.format_date import format_date
+
                         dt_obj_custom = format_date(raw_date)
                         if dt_obj_custom:
                             formatted_date = dt_obj_custom.strftime("%Y-%m-%d %H:%M:%S")
