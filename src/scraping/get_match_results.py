@@ -88,21 +88,16 @@ def get_matches_from_url(url, category):
 
             for match in rencontres:
                 raw_date = match.get("date")
-                logger.info("raw_date --->>>> ", raw_date, "")
                 formatted_date = None
                 if raw_date:
-                    try:
-                        dt_obj = parser.parse(raw_date)
+                    from src.utils.format_date import format_date
+                    dt_obj = format_date(raw_date)
+                    if dt_obj:
                         formatted_date = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
-                    except (ValueError, TypeError):
-
-                        dt_obj_custom = format_date(raw_date)
-                        if dt_obj_custom:
-                            formatted_date = dt_obj_custom.strftime("%Y-%m-%d %H:%M:%S")
 
                 if not formatted_date:
                     logger.warning(
-                        f"⚠️ Date invalide ou absente (raw='{raw_date}') -> Match ignoré : "
+                        f"⚠️ Date invalide (raw='{raw_date}') -> Match: "
                         f"{match.get('equipe1Libelle')} vs {match.get('equipe2Libelle')}"
                     )
                     continue
