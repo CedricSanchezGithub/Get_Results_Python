@@ -22,25 +22,27 @@ def get_all(url_start, category):
         logger.info(f"  -> {len(matches)} matchs trouvés sur la page initiale.")
 
     # 2. Gestion de la pagination intelligente
-    # Si on a trouvé la métadonnée des journées, on génère les autres URLs
     if journees_meta:
         logger.info(f"  -> {len(journees_meta)} journées détectées dans la structure.")
+        if len(journees_meta) > 0:
+            first_j = journees_meta[0]
+            logger.info(f"  🔍 [DEBUG STRUCT] Keys disponibles dans journees_meta[0]: {list(first_j.keys())}")
 
-        # On détecte le pattern de l'URL actuelle pour le remplacer
-        # Ex: .../poule-1234/journee-1/  -> on veut remplacer "journee-1" par "journee-X"
         base_url_pattern = re.sub(r"journee-\d+/?", "journee-{}/", url_start)
 
-        # Si l'URL n'avait pas de /journee-N/, on l'ajoute à la fin
         if base_url_pattern == url_start:
             if not base_url_pattern.endswith("/"): base_url_pattern += "/"
             base_url_pattern += "journee-{}/"
 
-        # On boucle sur toutes les journées trouvées
+        count_paginated = 0
         for journee in journees_meta:
-            num = journee.get("journee_numero")
+            num = journee.get("journeeNumero") or journee.get("journee_numero") or journee.get("numero")
 
-            # On évite de re-scraper la journée 1 si on vient de la faire
-            if str(num) in url_start:
+            if not num:
+                logger.warning(f"  ⚠️ Impossible de trouver le numéro de journée dans : {journee}. Skip.")
+                continue
+
+            if f"journee-{num}" in url_start or f"journee-{num}/" in url_start:
                 continue
 
             target_url = base_url_pattern.format(num)
@@ -48,6 +50,10 @@ def get_all(url_start, category):
             page_matches, _ = get_matches_from_url(target_url, category)
             if page_matches:
                 all_match_data.extend(page_matches)
+                count_paginated += len(page_matches)
+
+        logger.info(f"  -> {count_paginated} matchs supplémentaires récupérés via pagination.")
+
     else:
         logger.warning(
             "⚠️ Impossible de détecter les autres journées automatiquement. Seule l'URL fournie a été traitée.")
