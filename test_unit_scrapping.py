@@ -5,16 +5,14 @@ import html
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-# Configuration des logs
+
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
 
 
 def test_scraping_requests():
-    # URL cible
-    url = "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-f-prenationale-28365/poule-169120/journee-1/"
+    url = "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-m-preregionale-1ere-division-28343/poule-169284/journee-1/"
 
-    # Headers pour imiter un vrai navigateur (évite les blocages basiques)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
@@ -38,7 +36,6 @@ def test_scraping_requests():
 
         if not component:
             logger.error("❌ ÉCHEC : Composant 'competitions---rencontre-list' introuvable dans le source brut.")
-            # Debug : vérifier si on est bloqué ou si la page est différente
             logger.info("Snippet du HTML reçu :")
             logger.info(html_content[:500])
             return
