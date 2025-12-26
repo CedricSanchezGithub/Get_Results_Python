@@ -7,10 +7,8 @@ import logging
 import re
 from bs4 import BeautifulSoup
 from datetime import datetime
-from src.utils.format_date import format_date
 from src.config import DATA_DIR
-from dateutil import parser
-
+from src.utils.format_date import format_date
 
 def fetch_html(url):
     """Récupère le HTML brut via requests avec des headers navigateur."""
@@ -86,18 +84,25 @@ def get_matches_from_url(url, category):
             json_data = json.loads(html.unescape(raw_attr))
             rencontres = json_data.get("rencontres", [])
 
+            logger.info(f"📊 Traitement de {len(rencontres)} matchs pour {category} (J{current_journee})")
+
             for match in rencontres:
                 raw_date = match.get("date")
                 formatted_date = None
+
+                # Utilisation propre de la fonction importée
                 if raw_date:
-                    from src.utils.format_date import format_date
                     dt_obj = format_date(raw_date)
                     if dt_obj:
                         formatted_date = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
+                        # LOG DE SUCCÈS (Comme dans le test)
+                        logger.debug(f"   ✅ Date OK: {raw_date} -> {formatted_date}")
+                    else:
+                        logger.warning(f"   ❌ Date KO (Parse fail): '{raw_date}'")
 
                 if not formatted_date:
                     logger.warning(
-                        f"⚠️ Date invalide (raw='{raw_date}') -> Match: "
+                        f"⚠️ Date invalide ou manquante (raw='{raw_date}'). Match ignoré: "
                         f"{match.get('equipe1Libelle')} vs {match.get('equipe2Libelle')}"
                     )
                     continue
