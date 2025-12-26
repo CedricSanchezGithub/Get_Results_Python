@@ -1,5 +1,4 @@
 import os
-
 import requests
 import json
 import html
@@ -8,7 +7,9 @@ import re
 from bs4 import BeautifulSoup
 from datetime import datetime
 from src.config import DATA_DIR
+# Import propre au niveau du module
 from src.utils.format_date import format_date
+
 
 def fetch_html(url):
     """Récupère le HTML brut via requests avec des headers navigateur."""
@@ -25,58 +26,20 @@ def fetch_html(url):
 
 
 def get_matches_from_url(url, category):
-    """
-    Scrape les résultats des matchs depuis une URL FFHandball.
-
-    Cette fonction extrait les données des rencontres via le composant JSON 'competitions---rencontre-list'.
-
-    Règles métier appliquées :
-      - Filtrage strict : Tout match sans date valide ou avec une date "non disponible" est
-        immédiatement ignoré pour garantir l'intégrité de la base de données (prévention des NULLs).
-      - Pagination : Tente de récupérer les métadonnées des autres journées via les sélecteurs de poule.
-
-    Args:
-        url (str): L'URL cible de la journée à scraper.
-        category (str): La catégorie (ex: 'SF', '-18F') associée à ces matchs.
-
-    Returns:
-        tuple: (match_data, journees_meta)
-            - match_data (list): Liste de dictionnaires des matchs valides.
-            - journees_meta (list): Liste brute des journées disponibles pour la navigation.
-    """
-
     logger = logging.getLogger(__name__)
     html_content = fetch_html(url)
 
     if not html_content:
         return [], []
 
-    try:
-        # Création du dossier de debug s'il n'existe pas
-        debug_dir = os.path.join(DATA_DIR, "debug_html")
-        os.makedirs(debug_dir, exist_ok=True)
-
-        # Génération d'un nom de fichier unique : categorie_timestamp.html
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        # On nettoie la catégorie pour qu'elle soit valide dans un nom de fichier
-        safe_cat = re.sub(r'[^a-zA-Z0-9]', '_', category)
-        filename = os.path.join(debug_dir, f"scrape_{safe_cat}_{timestamp}.html")
-
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(html_content)
-
-        logger.info(f"🔍 [DEBUG] HTML brut sauvegardé : {filename}")
-
-    except Exception as e:
-        logger.warning(f"⚠️ Impossible de sauvegarder le fichier de debug : {e}")
-
     soup = BeautifulSoup(html_content, "html.parser")
-
     match_data = []
-    rencontre_component = soup.find("smartfire-component", attrs={"name": "competitions---rencontre-list"})
 
+    # Récupération du numéro de journée depuis l'URL (fallback)
     current_journee_match = re.search(r"journee-(\d+)", url)
     current_journee = current_journee_match.group(1) if current_journee_match else None
+
+    rencontre_component = soup.find("smartfire-component", attrs={"name": "competitions---rencontre-list"})
 
     if rencontre_component:
         try:
@@ -90,19 +53,20 @@ def get_matches_from_url(url, category):
                 raw_date = match.get("date")
                 formatted_date = None
 
-                # Utilisation propre de la fonction importée
                 if raw_date:
+
+                    logger.info(f"🔍 PRE-PARSE INPUT: '{raw_date}' | Repr: {repr(raw_date)} | Type: {type(raw_date)}")
+
                     dt_obj = format_date(raw_date)
                     if dt_obj:
                         formatted_date = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
-                        # LOG DE SUCCÈS (Comme dans le test)
-                        logger.debug(f"   ✅ Date OK: {raw_date} -> {formatted_date}")
+                        logger.info(f"   ✅ Date OK: {formatted_date}")
                     else:
-                        logger.warning(f"   ❌ Date KO (Parse fail): '{raw_date}'")
+                        logger.warning(f"   ❌ Date KO (Parse fail)")
 
                 if not formatted_date:
                     logger.warning(
-                        f"⚠️ Date invalide ou manquante (raw='{raw_date}'). Match ignoré: "
+                        f"⚠️ Date invalide/absente. Match ignoré: "
                         f"{match.get('equipe1Libelle')} vs {match.get('equipe2Libelle')}"
                     )
                     continue
@@ -131,19 +95,16 @@ def get_matches_from_url(url, category):
     if selector_component:
         try:
             raw_attr = selector_component.get("attributes", "{}")
-
             main_json = json.loads(html.unescape(raw_attr))
-            raw_journees = main_json.get("journees")
-            if not raw_journees and "poule" in main_json:
-                raw_journees = main_json["poule"].get("journees")
-            if not raw_journees and "selected_poule" in main_json:
-                raw_journees = main_json["selected_poule"].get("journees")
+
+            raw_journees = main_json.get("journees") or \
+                           (main_json.get("poule") or {}).get("journees") or \
+                           (main_json.get("selected_poule") or {}).get("journees")
 
             if isinstance(raw_journees, str):
                 journees_meta = json.loads(raw_journees)
             elif isinstance(raw_journees, list):
                 journees_meta = raw_journees
-
         except Exception as e:
             logger.warning(f"Impossible d'extraire la liste des journées pour {category}: {e}")
 
