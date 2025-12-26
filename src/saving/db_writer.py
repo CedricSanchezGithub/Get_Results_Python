@@ -1,8 +1,10 @@
 import logging
+from typing import List, Dict, Optional, Any
 from src.database.db_connector import get_connection
 
+logger = logging.getLogger(__name__)
 
-def _to_int_or_none(value):
+def _to_int_or_none(value: Any) -> Optional[int]:
     if value in (None, "", "-"):
         return None
     try:
@@ -10,19 +12,15 @@ def _to_int_or_none(value):
     except (ValueError, TypeError):
         return None
 
+def _to_str_or_none(value: Any) -> Optional[str]:
+    return str(value) if value else None
 
-def _to_str_or_none(value):
-    return value if value else None
-
-
-def db_writer_results(match_data_list: list, category: str):
+def db_writer_results(match_data_list: List[Dict], category: str):
+    """Écrit les résultats des matchs dans la base de données."""
     if not match_data_list:
-        logging.getLogger(__name__).info(f"Aucune donnée à insérer pour la catégorie '{category}'.")
         return
 
     table_name = "matches"
-
-    # Si le match existe (Date + Team1 + Team2 identiques), on met à jour les scores et infos
     insert_sql = f"""
         INSERT INTO {table_name} 
             (pool_id, match_date, team_1_name, team_1_score, team_2_name, team_2_score, 
@@ -33,18 +31,18 @@ def db_writer_results(match_data_list: list, category: str):
             team_2_score = VALUES(team_2_score),
             match_link = VALUES(match_link),
             round = VALUES(round),
-            pool_id = VALUES(pool_id)
+            pool_id = VALUES(pool_id),
+            match_date = VALUES(match_date)
     """
 
     connection = get_connection()
     if not connection:
-        logging.error("Impossible d'obtenir une connexion à la base de données.")
+        logger.error("Impossible d'obtenir une connexion à la BDD.")
         return
 
     data_to_insert = []
     for row in match_data_list:
         try:
-
             data_tuple = (
                 category,
                 _to_str_or_none(row.get('match_date')),
@@ -57,32 +55,73 @@ def db_writer_results(match_data_list: list, category: str):
                 _to_str_or_none(row.get('journee'))
             )
             data_to_insert.append(data_tuple)
-        except Exception as e:
-            logging.error(f"Échec de la préparation des données pour la ligne : {row}", exc_info=True)
+        except Exception:
+            logger.error(f"Échec préparation ligne match : {row}", exc_info=True)
             continue
 
-    if not data_to_insert:
-        logging.getLogger(__name__).warning(f"Aucune donnée valide à insérer après préparation pour '{category}'.")
+    if data_to_insert:
+        _execute_batch(connection, insert_sql, data_to_insert, f"Matchs '{category}'")
+    else:
         connection.close()
+
+
+def db_writer_ranking(ranking_data: List[Dict], category: str):
+    """Écrit le classement dans la base de données."""
+    if not ranking_data:
         return
 
-    inserted_count = 0
+    table_name = "ranking"
+    insert_sql = f"""
+        INSERT INTO {table_name} 
+            (pool_id, team_name, rank_number, points, matches_played, won, draws, lost, goal_diff)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE
+            rank_number = VALUES(rank_number),
+            points = VALUES(points),
+            matches_played = VALUES(matches_played),
+            won = VALUES(won),
+            draws = VALUES(draws),
+            lost = VALUES(lost),
+            goal_diff = VALUES(goal_diff)
+    """
 
+    connection = get_connection()
+    if not connection:
+        return
+
+    data_to_insert = []
+    for row in ranking_data:
+        try:
+            data_tuple = (
+                category,
+                _to_str_or_none(row.get('team_name')),
+                _to_int_or_none(row.get('rank')),
+                _to_int_or_none(row.get('points')),
+                _to_int_or_none(row.get('matches_played')),
+                _to_int_or_none(row.get('won')),
+                _to_int_or_none(row.get('draws')),
+                _to_int_or_none(row.get('lost')),
+                _to_int_or_none(row.get('goal_diff'))
+            )
+            data_to_insert.append(data_tuple)
+        except Exception:
+            logger.error(f"Échec préparation ligne classement : {row}", exc_info=True)
+            continue
+
+    if data_to_insert:
+        _execute_batch(connection, insert_sql, data_to_insert, f"Classement '{category}'")
+    else:
+        connection.close()
+
+
+def _execute_batch(connection, sql, data, context_name):
+    """Fonction helper pour exécuter les batchs SQL."""
     try:
         with connection.cursor() as cursor:
-            affected_rows = cursor.executemany(insert_sql, data_to_insert)
-            inserted_count = affected_rows if affected_rows is not None else 0
-
+            cursor.executemany(sql, data)
         connection.commit()
-        logging.info(
-            f"Traitement terminé pour la poule '{category}' : "
-            f"{inserted_count} opérations (Insertions ou Mises à jour) sur {len(data_to_insert)} items."
-        )
-
-    except Exception as e:
-        logging.exception(f"Erreur majeure lors de l'écriture transactionnelle dans '{table_name}', annulation.")
-        if connection:
-            connection.rollback()
+    except Exception:
+        logger.exception(f"❌ Erreur critique écriture BDD pour {context_name}")
+        connection.rollback()
     finally:
-        if connection:
-            connection.close()
+        connection.close()

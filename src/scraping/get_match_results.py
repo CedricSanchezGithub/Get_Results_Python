@@ -1,53 +1,99 @@
+import hashlib
 import logging
 import json
 import html
+import os
 import re
+import time
+
 import requests
 from bs4 import BeautifulSoup
 from typing import List, Dict, Tuple, Optional
 
+from src.config import DEBUG_DIR
+from src.scraping.get_ranking import extract_ranking_from_soup
 from src.utils.format_date import format_date
 
 logger = logging.getLogger(__name__)
 
 
-def fetch_html(url: str) -> Optional[str]:
-    """Récupère le HTML brut via requests."""
+def _save_debug_html(url: str, content: str, prefix: str = ""):
+    """
+    Sauvegarde le HTML brut dans le dossier debug pour analyse.
+    Génère un nom de fichier unique basé sur l'URL et le timestamp.
+    """
+    try:
+        # Création d'un hash court de l'URL pour éviter les caractères interdits dans les noms de fichiers
+        url_hash = hashlib.md5(url.encode()).hexdigest()[:8]
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+
+        # Nettoyage du préfixe
+        safe_prefix = "".join([c for c in prefix if c.isalnum() or c in ('-', '_')]).strip()
+        filename = f"{timestamp}_{safe_prefix}_{url_hash}.html"
+
+        filepath = os.path.join(DEBUG_DIR, filename)
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        logger.info(f"💾 HTML brut sauvegardé : {filename}")
+
+    except Exception as e:
+        logger.warning(f"⚠️ Impossible de sauvegarder le HTML de debug : {e}")
+
+
+def fetch_html(url: str, save_debug: bool = False, debug_prefix: str = "dump") -> Optional[str]:
+    """
+    Récupère le HTML brut via requests.
+    Args:
+        url: L'URL cible.
+        save_debug: Si True, sauvegarde le fichier localement.
+        debug_prefix: Préfixe pour le nom du fichier de debug.
+    """
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
     try:
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
-        return response.text
+
+        html_text = response.text
+
+        # HOOK DE DEBUG
+        if save_debug:
+            _save_debug_html(url, html_text, debug_prefix)
+
+        return html_text
+
     except Exception as e:
         logger.error(f"Erreur réseau sur {url} : {e}")
         return None
 
 
-def get_matches_from_url(url: str, category: str) -> Tuple[List[Dict], List[Dict]]:
+def get_matches_from_url(url: str, category: str) -> Tuple[
+    List[Dict], List[Dict], List[Dict]]:
     """
     Fonction principale (Orchestrateur) :
     1. Récupère le HTML
     2. Extrait les matchs
-    3. Extrait les métadonnées de pagination
+    3. Extrait la pagination
+    4. Extrait le classement (NOUVEAU)
     """
     html_content = fetch_html(url)
     if not html_content:
-        return [], []
+        return [], [], []
 
     soup = BeautifulSoup(html_content, "html.parser")
 
-    # 1. Tentative de deviner la journée via l'URL (pour fallback)
     current_journee = _extract_journee_from_url(url)
-
-    # 2. Extraction des Matchs
     matches = _extract_matches_from_soup(soup, category, current_journee)
-
-    # 3. Extraction de la Pagination
     journees_meta = _extract_pagination_meta(soup, category)
 
-    return matches, journees_meta
+    ranking = extract_ranking_from_soup(soup)
+    if ranking:
+        logger.info(f"📊 Classement récupéré : {len(ranking)} équipes.")
+
+    return matches, journees_meta, ranking
 
 
 def _extract_journee_from_url(url: str) -> Optional[str]:
