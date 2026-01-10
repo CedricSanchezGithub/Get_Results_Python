@@ -58,7 +58,8 @@ def get_all(url_start: str, category: str):
         logger.warning(f"⚠️ Aucun match trouvé pour '{category}'")
 
     if latest_ranking:
-        db_writer_ranking(latest_ranking, category)
+        effective_pool_id = poule_id if poule_id else f"UNKNOWN_{category}"
+        db_writer_ranking(latest_ranking, category, effective_pool_id)
         logger.info("💾 Classement sauvegardé.")
     else:
         logger.warning(f"⚠️ Aucun classement trouvé (ni API, ni HTML) pour '{category}'")

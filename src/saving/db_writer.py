@@ -65,16 +65,17 @@ def db_writer_results(match_data_list: List[Dict], category: str):
         connection.close()
 
 
-def db_writer_ranking(ranking_data: List[Dict], category: str):
-    """Écrit le classement dans la base de données."""
+def db_writer_ranking(ranking_data: List[Dict], category_label: str, real_pool_id: str):
+    """Écrit le classement dans la base de données avec le ID de poule."""
     if not ranking_data:
         return
 
     table_name = "ranking"
+
     insert_sql = f"""
         INSERT INTO {table_name} 
-            (pool_id, team_name, rank_number, points, matches_played, won, draws, lost, goal_diff)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+            (pool_id, category, team_name, rank_number, points, matches_played, won, draws, lost, goal_diff)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE
             rank_number = VALUES(rank_number),
             points = VALUES(points),
@@ -82,7 +83,8 @@ def db_writer_ranking(ranking_data: List[Dict], category: str):
             won = VALUES(won),
             draws = VALUES(draws),
             lost = VALUES(lost),
-            goal_diff = VALUES(goal_diff)
+            goal_diff = VALUES(goal_diff),
+            category = VALUES(category) -- Met à jour la catégorie si besoin
     """
 
     connection = get_connection()
@@ -93,7 +95,8 @@ def db_writer_ranking(ranking_data: List[Dict], category: str):
     for row in ranking_data:
         try:
             data_tuple = (
-                category,
+                str(real_pool_id),
+                category_label,
                 _to_str_or_none(row.get('team_name')),
                 _to_int_or_none(row.get('rank')),
                 _to_int_or_none(row.get('points')),
@@ -109,7 +112,7 @@ def db_writer_ranking(ranking_data: List[Dict], category: str):
             continue
 
     if data_to_insert:
-        _execute_batch(connection, insert_sql, data_to_insert, f"Classement '{category}'")
+        _execute_batch(connection, insert_sql, data_to_insert, f"Classement Poule {real_pool_id}")
     else:
         connection.close()
 
