@@ -12,6 +12,7 @@ from typing import List, Dict, Tuple, Optional
 
 from src.config import DEBUG_DIR
 from src.scraping.get_ranking import extract_ranking_from_soup
+from src.scraping.get_ranking_api import get_ranking_from_api
 from src.utils.format_date import format_date
 
 logger = logging.getLogger(__name__)
@@ -70,31 +71,57 @@ def fetch_html(url: str, save_debug: bool = False, debug_prefix: str = "dump") -
         return None
 
 
-def get_matches_from_url(url: str, category: str) -> Tuple[
-    List[Dict], List[Dict], List[Dict]]:
+def get_matches_from_url(url: str, category: str) -> Tuple[List[Dict], List[Dict], List[Dict]]:
     """
-    Fonction principale (Orchestrateur) :
-    1. Récupère le HTML
-    2. Extrait les matchs
-    3. Extrait la pagination
-    4. Extrait le classement (NOUVEAU)
+    Orchestrateur principal du scraping pour une poule donnée.
+
+    Stratégie Hybride "Multi-Sources" :
+    1. Calcule l'URL 'Classements' à partir de l'URL 'Matchs'.
+    2. Appelle l'API sécurisée pour récupérer le Classement ET le Titre Officiel (Méta-donnée).
+    3. Scrape la page HTML actuelle pour récupérer les Matchs et la Pagination.
+    4. Injecte le Titre Officiel (official_phase_name) dans tous les objets (Matchs et Classement)
+       pour permettre la distinction des onglets dans l'application.
+
+    Args:
+        url (str): L'URL de la page des rencontres (source primaire).
+        category (str): Le code catégorie générique (ex: "SF", "M15").
+
+    Returns:
+        Tuple: (Liste des Matchs enrichis, Liste des Journées, Liste du Classement enrichi).
     """
+    # 1. Récupération HTML (Matchs)
     html_content = fetch_html(url)
     if not html_content:
         return [], [], []
 
     soup = BeautifulSoup(html_content, "html.parser")
 
+    # 2. Récupération API (Classement + Titre Officiel)
+    # Transformation d'URL : ".../journee-X/" -> ".../classements/"
+    base_url = url.split("journee-")[0] if "journee-" in url else url.replace("/rencontres", "")
+    if base_url.endswith("/"):
+        ranking_url = f"{base_url}classements/"
+    else:
+        ranking_url = f"{base_url}/classements/"
+
+    official_phase_name, ranking = get_ranking_from_api(ranking_url)
+
+    if official_phase_name:
+        logger.info(f"✨ Phase identifiée : '{official_phase_name}' (pour {category})")
+        # Injection du nom officiel dans les objets classement
+        for row in ranking:
+            row['official_phase_name'] = official_phase_name
+    else:
+        logger.warning(f"⚠️ Titre officiel non trouvé pour {url}, fallback sur category.")
+
+    # 3. Extraction des Matchs (avec injection du titre)
     current_journee = _extract_journee_from_url(url)
-    matches = _extract_matches_from_soup(soup, category, current_journee)
+    matches = _extract_matches_from_soup(soup, category, current_journee, official_phase_name)
+
+    # 4. Extraction de la Pagination
     journees_meta = _extract_pagination_meta(soup, category)
 
-    ranking = extract_ranking_from_soup(soup)
-    if ranking:
-        logger.info(f"📊 Classement récupéré : {len(ranking)} équipes.")
-
     return matches, journees_meta, ranking
-
 
 def _extract_journee_from_url(url: str) -> Optional[str]:
     """Extrait le numéro de journée (ex: '1') depuis l'URL."""
@@ -102,8 +129,11 @@ def _extract_journee_from_url(url: str) -> Optional[str]:
     return match.group(1) if match else None
 
 
-def _extract_matches_from_soup(soup: BeautifulSoup, category: str, default_journee: Optional[str]) -> List[Dict]:
-    """Cherche le composant 'rencontre-list' et parse chaque match."""
+def _extract_matches_from_soup(soup: BeautifulSoup, category: str, default_journee: Optional[str], official_phase_name: Optional[str] = None) -> List[Dict]:
+    """
+    Extrait la liste brute des rencontres depuis le composant React et délègue le parsing.
+    Passe le 'official_phase_name' au processeur unitaire.
+    """
     component = soup.find("smartfire-component", attrs={"name": "competitions---rencontre-list"})
 
     if not component:
@@ -118,7 +148,7 @@ def _extract_matches_from_soup(soup: BeautifulSoup, category: str, default_journ
         logger.info(f"📊 Traitement de {len(rencontres)} matchs pour {category} (J{default_journee})")
 
         for match_json in rencontres:
-            processed_match = _process_single_match(match_json, category, default_journee)
+            processed_match = _process_single_match(match_json, category, default_journee, official_phase_name)
             if processed_match:
                 results.append(processed_match)
 
@@ -128,36 +158,27 @@ def _extract_matches_from_soup(soup: BeautifulSoup, category: str, default_journ
     return results
 
 
-def _process_single_match(match: Dict, category: str, default_journee: Optional[str]) -> Optional[Dict]:
+def _process_single_match(match: Dict, category: str, default_journee: Optional[str],
+                          official_phase_name: Optional[str] = None) -> Optional[Dict]:
     """
-    Traite un match individuel : Parsing date, Validation, Construction dict.
-    Retourne None si le match est invalide.
+    Transforme un objet match JSON brut en dictionnaire normalisé pour la BDD.
+
+    Enrichissement :
+    - Ajoute le champ 'official_phase_name' (ex: "Excellence") pour différencier les phases
+      au sein d'une même catégorie (ex: "SF").
     """
     raw_date = match.get("date")
     formatted_date = None
 
-    # --- BLOC LOGIQUE DATE (Ta version debuggée) ---
     if raw_date:
-        # Log de debug profond (Inspection)
-        logger.info(f"🔍 PRE-PARSE INPUT: '{raw_date}' | Repr: {repr(raw_date)} | Type: {type(raw_date)}")
-
         dt_obj = format_date(raw_date)
         if dt_obj:
             formatted_date = dt_obj.strftime("%Y-%m-%d %H:%M:%S")
-            logger.info(f"   ✅ Date OK: {formatted_date}")
-        else:
-            logger.warning(f"   ❌ Date KO (Parse fail)")
 
     if not formatted_date:
-        # On loggue le contenu complet si la date manque, pour comprendre pourquoi
-        match_debug = json.dumps(match, ensure_ascii=False)
-        logger.warning(
-            f"⚠️ Date invalide/absente. Match ignoré: "
-            f"{match.get('equipe1Libelle')} vs {match.get('equipe2Libelle')} | JSON: {match_debug}"
-        )
+        logger.warning(f"⚠️ Date invalide pour match: {match.get('equipe1Libelle')} vs {match.get('equipe2Libelle')}")
         return None
 
-    # Construction de l'objet final
     return {
         "match_date": formatted_date,
         "team_1_name": match.get("equipe1Libelle", "Nom non disponible"),
@@ -166,9 +187,10 @@ def _process_single_match(match: Dict, category: str, default_journee: Optional[
         "team_2_score": match.get("equipe2Score") if match.get("equipe2Score") != "" else None,
         "match_link": None,
         "competition": category,
-        "journee": match.get("journeeNumero", default_journee)
+        "journee": match.get("journeeNumero", default_journee),
+        # NOUVEAU CHAMP CRITIQUE
+        "official_phase_name": official_phase_name
     }
-
 
 def _extract_pagination_meta(soup: BeautifulSoup, category: str) -> List[Dict]:
     """Gère la logique complexe de récupération de la liste des journées."""
