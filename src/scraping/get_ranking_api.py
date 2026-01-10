@@ -3,12 +3,10 @@ import json
 import logging
 import re
 from urllib.parse import urlencode
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple, Optional
 
 import requests
 from bs4 import BeautifulSoup
-
-# Import de la logique partagée
 from src.scraping.get_ranking import parse_ranking_list
 
 logger = logging.getLogger(__name__)
