@@ -43,17 +43,17 @@ def get_all(url_start: str, category: str):
     # 3. Tentative API (Prioritaire pour le classement)
     poule_id = _extract_poule_id(url_start)
     api_ranking = get_ranking_from_api(url_start, poule_id_fallback=poule_id)
-
+    effective_pool_id = poule_id if poule_id else f"UNKNOWN_{category}"
     if api_ranking:
-        latest_ranking = api_ranking  # L'API écrase le HTML car plus fiable
+        latest_ranking = api_ranking
         logger.info(f"✅ Classement récupéré via API ({len(api_ranking)} équipes).")
     elif latest_ranking:
         logger.info(f"ℹ️ Utilisation du classement HTML ({len(latest_ranking)} équipes).")
 
     # 4. Sauvegardes
     if all_match_data:
-        db_writer_results(all_match_data, category)
-        logger.info(f"💾 Matchs sauvegardés : {len(all_match_data)}")
+        db_writer_results(all_match_data, category, effective_pool_id)
+        logger.info(f"💾 Matchs sauvegardés : {len(all_match_data)} (Poule {effective_pool_id})")
     else:
         logger.warning(f"⚠️ Aucun match trouvé pour '{category}'")
 

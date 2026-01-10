@@ -15,24 +15,25 @@ def _to_int_or_none(value: Any) -> Optional[int]:
 def _to_str_or_none(value: Any) -> Optional[str]:
     return str(value) if value else None
 
-def db_writer_results(match_data_list: List[Dict], category: str):
-    """Écrit les résultats des matchs dans la base de données."""
+def db_writer_results(match_data_list: List[Dict], category_label: str, real_pool_id: str):
+    """Écrit les résultats des matchs dans la base de données avec l'ID technique."""
     if not match_data_list:
         return
 
     table_name = "matches"
+    # Mise à jour de la requête SQL : pool_id reçoit l'ID technique, category reçoit le label
     insert_sql = f"""
         INSERT INTO {table_name} 
-            (pool_id, match_date, team_1_name, team_1_score, team_2_name, team_2_score, 
+            (pool_id, category, match_date, team_1_name, team_1_score, team_2_name, team_2_score, 
              match_link, competition, round)
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ON DUPLICATE KEY UPDATE
             team_1_score = VALUES(team_1_score),
             team_2_score = VALUES(team_2_score),
             match_link = VALUES(match_link),
             round = VALUES(round),
-            pool_id = VALUES(pool_id),
-            match_date = VALUES(match_date)
+            match_date = VALUES(match_date),
+            category = VALUES(category)
     """
 
     connection = get_connection()
@@ -44,7 +45,8 @@ def db_writer_results(match_data_list: List[Dict], category: str):
     for row in match_data_list:
         try:
             data_tuple = (
-                category,
+                str(real_pool_id),
+                category_label,
                 _to_str_or_none(row.get('match_date')),
                 _to_str_or_none(row.get('team_1_name')),
                 _to_int_or_none(row.get('team_1_score')),
@@ -60,7 +62,7 @@ def db_writer_results(match_data_list: List[Dict], category: str):
             continue
 
     if data_to_insert:
-        _execute_batch(connection, insert_sql, data_to_insert, f"Matchs '{category}'")
+        _execute_batch(connection, insert_sql, data_to_insert, f"Matchs Poule {real_pool_id}")
     else:
         connection.close()
 
@@ -84,7 +86,7 @@ def db_writer_ranking(ranking_data: List[Dict], category_label: str, real_pool_i
             draws = VALUES(draws),
             lost = VALUES(lost),
             goal_diff = VALUES(goal_diff),
-            category = VALUES(category) -- Met à jour la catégorie si besoin
+            category = VALUES(category)
     """
 
     connection = get_connection()
