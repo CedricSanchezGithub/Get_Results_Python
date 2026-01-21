@@ -7,7 +7,7 @@ import time
 def get_urls_from_api():
     logger = logging.getLogger(__name__)
 
-    api_url = os.getenv("API_URL", "http://backend:8081/api/competitions/active")
+    api_url = os.getenv("API_URL", "http://backend:8081/api/competitions")
     api_key = os.getenv("API_KEY", "secret_local_dev")
 
     headers = {
