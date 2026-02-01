@@ -14,6 +14,7 @@ from src.config import DEBUG_DIR
 from src.scraping.get_ranking import extract_ranking_from_soup
 from src.scraping.get_ranking_api import get_ranking_from_api
 from src.utils.format_date import format_date
+from src.utils.rate_limiter import get_rate_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ def _save_debug_html(url: str, content: str, prefix: str = ""):
 
 def fetch_html(url: str, save_debug: bool = False, debug_prefix: str = "dump") -> Optional[str]:
     """
-    Récupère le HTML brut via requests.
+    Récupère le HTML brut via requests avec rate limiting.
     Args:
         url: L'URL cible.
         save_debug: Si True, sauvegarde le fichier localement.
@@ -55,6 +56,10 @@ def fetch_html(url: str, save_debug: bool = False, debug_prefix: str = "dump") -
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
     }
     try:
+        # Rate limiting avant la requête
+        limiter = get_rate_limiter()
+        limiter.wait()
+
         response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
 

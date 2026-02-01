@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Tuple, Optional
 import requests
 from bs4 import BeautifulSoup
 from src.scraping.get_ranking import parse_ranking_list
+from src.utils.rate_limiter import get_rate_limiter
 
 logger = logging.getLogger(__name__)
 
@@ -81,8 +82,12 @@ def get_ranking_from_api(url_page: str, poule_id_fallback: str = None) -> Tuple[
     })
 
     try:
+        # Rate limiting avant les requêtes
+        limiter = get_rate_limiter()
+
         # 1. Page Initiale (Récupération de la clé contextuelle)
         logger.info(f"🌍 Fetch page initiale: {url_page}")
+        limiter.wait()
         resp = session.get(url_page, timeout=10)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
@@ -116,6 +121,7 @@ def get_ranking_from_api(url_page: str, poule_id_fallback: str = None) -> Tuple[
         api_url = f"https://www.ffhandball.fr/wp-json/competitions/v1/computeBlockAttributes?{urlencode(api_params)}"
 
         logger.debug(f"📡 Appel API: {api_url}")
+        limiter.wait()
         api_resp = session.get(api_url, timeout=10)
 
         if api_resp.status_code >= 400:

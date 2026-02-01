@@ -149,4 +149,4 @@ if __name__ == '__main__':
     atexit.register(lambda: scheduler.shutdown())
 
     # Lancement de l'appli Flask (sur port 5000 par défaut)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5001, debug=True)

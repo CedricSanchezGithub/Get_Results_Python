@@ -1,52 +1,135 @@
 import time
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from typing import List, Optional
+
 from src.saving.db_logger import create_log_entry, update_log_entry
 from src.utils.logging_config import configure_logging
 from src.scraping.get_all import get_all
 from src.utils.sources.api_fetcher import get_urls_from_api
+from src.utils.rate_limiter import RateLimiter
+from src.settings import get_scraper_settings
 
 
-def run_daily_scraping():
+@dataclass
+class ScrapingResult:
+    """Résultat du scraping d'une source."""
+    source_id: str
+    category: str
+    success: bool
+    error: Optional[str] = None
 
-    configure_logging()
-    logger = logging.getLogger(__name__)
-    log_id = create_log_entry()
-    start_time = time.time()
-    logger.info("🚀 Job scraping: début (Mode Requests / Sans Headless)")
 
-    job_status = "SUCCESS"
-    error_message = None
+def _scrape_single_source(entry: dict, logger: logging.Logger) -> ScrapingResult:
+    """
+    Scrape une source individuelle. Fonction exécutée par chaque worker.
+    """
+    source_id = entry.get("id", "unknown")
+    target_url = entry.get("url")
+    category_label = entry.get("category", "Inconnue")
+
+    if not source_id or not target_url:
+        return ScrapingResult(
+            source_id=str(source_id),
+            category=category_label,
+            success=False,
+            error="ID ou URL manquant"
+        )
 
     try:
+        get_all(target_url, category_label)
+        return ScrapingResult(
+            source_id=str(source_id),
+            category=category_label,
+            success=True
+        )
+    except Exception as e:
+        logger.exception(f"❌ Erreur sur source ID {source_id} ({category_label}): {e}")
+        return ScrapingResult(
+            source_id=str(source_id),
+            category=category_label,
+            success=False,
+            error=str(e)
+        )
 
+
+def run_daily_scraping(max_workers: int = None, rate_limit_delay: float = None):
+    """
+    Exécute le scraping quotidien avec parallélisation.
+
+    Args:
+        max_workers: Nombre de workers parallèles (défaut: depuis settings)
+        rate_limit_delay: Délai minimum entre requêtes en secondes (défaut: depuis settings)
+    """
+    configure_logging()
+    logger = logging.getLogger(__name__)
+
+    # Configuration depuis settings (validées par Pydantic)
+    scraper_settings = get_scraper_settings()
+    if max_workers is None:
+        max_workers = scraper_settings.max_workers
+    if rate_limit_delay is None:
+        rate_limit_delay = scraper_settings.rate_limit_delay
+
+    # Initialiser le rate limiter global
+    RateLimiter(min_delay=rate_limit_delay, burst_limit=10, burst_window=15.0)
+
+    log_id = create_log_entry()
+    start_time = time.time()
+    logger.info(f"🚀 Job scraping: début (workers={max_workers}, rate_limit={rate_limit_delay}s)")
+
+    job_status = "SUCCESS"
+    errors: List[str] = []
+    success_count = 0
+    total_count = 0
+
+    try:
         urls_list = get_urls_from_api()
+        total_count = len(urls_list)
 
-        for entry in urls_list:
-            category = entry.get("category")
-            target_url = entry.get("url")
+        if not urls_list:
+            logger.warning("⚠️ Aucune source à scraper.")
+            return
 
-            if not category or not target_url:
-                logger.warning(f"⚠️ Entrée invalide ignorée : {entry}")
-                continue
+        logger.info(f"📋 {total_count} sources à traiter")
 
-            try:
-                get_all(target_url, category)
+        # Exécution parallèle avec ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Soumettre toutes les tâches
+            future_to_entry = {
+                executor.submit(_scrape_single_source, entry, logger): entry
+                for entry in urls_list
+            }
 
-            except Exception as e:
-                logger.exception(f"❌ Erreur critique sur la catégorie {category}: {e}")
+            # Collecter les résultats au fur et à mesure
+            for future in as_completed(future_to_entry):
+                result = future.result()
+
+                if result.success:
+                    success_count += 1
+                    logger.info(f"✅ [{success_count}/{total_count}] {result.category} terminé")
+                else:
+                    errors.append(f"{result.category} (ID {result.source_id}): {result.error}")
+
+        # Déterminer le statut final
+        if errors:
+            if success_count == 0:
+                job_status = "FAILURE"
+            else:
                 job_status = "PARTIAL_SUCCESS"
-                msg = f"Erreur sur {category}: {str(e)}"
-                error_message = f"{error_message}; {msg}" if error_message else msg
-                continue
 
     except Exception as e:
         logger.exception(f"🔥 Erreur fatale globale: {e}")
         job_status = "FAILURE"
-        error_message = str(e)
+        errors.append(f"Erreur fatale: {str(e)}")
 
     finally:
         elapsed_time = time.time() - start_time
-        logger.info(f"🏁 Job scraping terminé en {elapsed_time:.2f} s. Statut: {job_status}")
+        error_message = "; ".join(errors) if errors else None
+
+        logger.info(f"🏁 Job terminé en {elapsed_time:.2f}s. "
+                    f"Succès: {success_count}/{total_count}. Statut: {job_status}")
 
         update_log_entry(
             log_id=log_id,

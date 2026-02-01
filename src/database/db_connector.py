@@ -1,55 +1,54 @@
-import os
 import time
 import pymysql
 import sys
 import logging
-from flask.cli import load_dotenv
+
+from src.settings import get_db_settings
+
+logger = logging.getLogger(__name__)
+
+# Flag pour éviter de refaire le healthcheck à chaque connexion
+_mysql_ready = False
 
 
-def wait_for_mysql(host, user, password, db, port, retries=10, delay=3):
-    """Attend que MySQL soit prêt à accepter les connexions."""
-    logger = logging.getLogger(__name__)
-    logger.info(f"Tentative de connexion à MySQL @ {host}:{port}...")
+def wait_for_mysql(config: dict, retries: int = 10, delay: int = 3):
+    """Attend que MySQL soit prêt à accepter les connexions (appelé une seule fois)."""
+    global _mysql_ready
+
+    if _mysql_ready:
+        return
+
+    logger.info(f"Vérification de la disponibilité MySQL @ {config['host']}:{config['port']}...")
     for i in range(1, retries + 1):
         try:
-            conn = pymysql.connect(
-                host=host,
-                user=user,
-                password=password,
-                database=db,
-                port=port
-            )
+            conn = pymysql.connect(**config)
             conn.close()
             logger.info(f"MySQL est prêt (connexion réussie à la tentative {i}).")
+            _mysql_ready = True
             return
         except pymysql.err.OperationalError as e:
             logger.warning(f"[{i}/{retries}] MySQL non disponible: {e}")
-            time.sleep(delay)
+            if i < retries:
+                time.sleep(delay)
 
     logger.error("Impossible de se connecter à MySQL après plusieurs tentatives.")
     sys.exit(1)
 
 
 def get_connection():
-    load_dotenv()
+    """Retourne une connexion MySQL. Le healthcheck n'est fait qu'une seule fois."""
+    db_settings = get_db_settings()
 
-    host = os.getenv("MYSQL_HOST", "localhost")
-    user = os.getenv("MYSQL_USER")
-    password = os.getenv("MYSQL_PASSWORD")
-    database = os.getenv("MYSQL_DATABASE")
-    port = int(os.getenv("MYSQL_PORT", "3306"))
+    if not db_settings.is_configured:
+        raise RuntimeError(
+            "Variables d'environnement manquantes pour MySQL: "
+            "MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE. "
+            "Vérifiez votre fichier .env ou les variables du conteneur."
+        )
 
-    if not all([user, password, database]):
-        raise RuntimeError("Variables d'environnement manquantes pour MySQL: MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE. Vérifiez votre fichier .env ou les variables du conteneur.")
+    config = db_settings.connection_params
 
-    # Attendre que MySQL soit opérationnel
-    wait_for_mysql(host, user, password, database, port)
+    # Healthcheck initial (skip si déjà validé)
+    wait_for_mysql(config)
 
-    # Connexion réelle
-    return pymysql.connect(
-        host=host,
-        user=user,
-        password=password,
-        database=database,
-        port=port
-    )
+    return pymysql.connect(**config)

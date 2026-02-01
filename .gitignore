@@ -23,3 +23,9 @@ htmlcov/
 .env
 .env.local
 .env.*.local
+
+# Data & Debug outputs
+data/
+debug_*.html
+debug_logos_output/
+index.html

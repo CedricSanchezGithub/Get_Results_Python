@@ -1,14 +1,16 @@
-import os
 import requests
 import logging
 import time
+
+from src.settings import get_source_api_settings
 
 
 def get_urls_from_api():
     logger = logging.getLogger(__name__)
 
-    api_url = os.getenv("API_URL", "http://backend:8081/api/competitions")
-    api_key = os.getenv("API_KEY", "secret_local_dev")
+    source_settings = get_source_api_settings()
+    api_url = source_settings.api_url
+    api_key = source_settings.api_key
 
     headers = {
         "X-API-KEY": api_key,
@@ -41,4 +43,5 @@ def get_urls_from_api():
             else:
                 logger.error("❌ Abandon après plusieurs échecs.")
                 return []
+
     return []
