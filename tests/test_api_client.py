@@ -130,3 +130,74 @@ class TestIngestClientRetry:
 
             assert result is True
             assert mock_post.call_count == 2
+
+    def test_jitter_adds_randomness(self, ingest_client, sample_matches):
+        """Vérifie que le jitter ajoute de l'aléatoire au délai."""
+        import time
+        delays = []
+
+        def capture_delay(seconds):
+            delays.append(seconds)
+
+        with patch.object(ingest_client.session, 'post') as mock_post, \
+             patch('src.saving.api_client.time.sleep', side_effect=capture_delay):
+            mock_post.return_value = MagicMock(status_code=500, text="Error")
+            ingest_client.send_matches(sample_matches)
+
+        # Avec base_delay=0.01, le delay de base serait 0.01, 0.02
+        # Avec jitter (0 à 0.5), les delays doivent être >= base mais < base + 0.5
+        assert len(delays) == 2  # 2 retries = 2 sleeps
+        assert all(d >= 0.01 for d in delays)
+        assert all(d < 0.6 for d in delays)  # base_delay * 2 + max_jitter
+
+
+class TestIngestClientSendRankings:
+    """Tests d'envoi de classements."""
+
+    @pytest.fixture
+    def sample_rankings(self):
+        """Liste de classements pour les tests."""
+        from src.models.models import RankingIngest
+        return [
+            RankingIngest(
+                category="-18M",
+                pool_id="169284",
+                team_name="Club A",
+                rank=1,
+                points=15,
+                matches_played=5,
+                won=5,
+                draws=0,
+                lost=0
+            )
+        ]
+
+    def test_send_empty_list(self, ingest_client):
+        assert ingest_client.send_rankings([]) is True
+
+    def test_send_rankings_success(self, ingest_client, sample_rankings):
+        with patch.object(ingest_client.session, 'post') as mock_post:
+            mock_post.return_value = MagicMock(status_code=200)
+
+            result = ingest_client.send_rankings(sample_rankings)
+
+            assert result is True
+            mock_post.assert_called_once()
+
+    def test_send_rankings_no_url(self, sample_rankings):
+        """Retourne False si aucune URL de rankings configurée."""
+        from src.settings import BackendAPISettings, ScraperSettings
+        with patch("src.saving.api_client.get_backend_settings") as mock_backend, \
+             patch("src.saving.api_client.get_scraper_settings") as mock_scraper:
+            mock_backend.return_value = BackendAPISettings(
+                api_url=None,
+                rankings_api_url=None,
+                api_key="test",
+                _env_file=None
+            )
+            mock_scraper.return_value = ScraperSettings(_env_file=None)
+            client = IngestClient()
+
+            result = client.send_rankings(sample_rankings)
+
+            assert result is False

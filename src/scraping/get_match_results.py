@@ -13,6 +13,7 @@ from typing import List, Dict, Tuple, Optional
 from src.config import DEBUG_DIR
 from src.scraping.get_ranking import extract_ranking_from_soup
 from src.scraping.get_ranking_api import get_ranking_from_api
+from src.settings import get_scraper_settings
 from src.utils.format_date import format_date
 from src.utils.rate_limiter import get_rate_limiter
 
@@ -60,7 +61,8 @@ def fetch_html(url: str, save_debug: bool = False, debug_prefix: str = "dump") -
         limiter = get_rate_limiter()
         limiter.wait()
 
-        response = requests.get(url, headers=headers, timeout=15)
+        timeout = get_scraper_settings().request_timeout
+        response = requests.get(url, headers=headers, timeout=timeout)
         response.raise_for_status()
 
         html_text = response.text
@@ -184,12 +186,21 @@ def _process_single_match(match: Dict, category: str, default_journee: Optional[
         logger.warning(f"⚠️ Date invalide pour match: {match.get('equipe1Libelle')} vs {match.get('equipe2Libelle')}")
         return None
 
+    # Helper pour convertir les scores en int
+    def parse_score(value):
+        if value is None or value == "":
+            return None
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return None
+
     return {
         "match_date": formatted_date,
         "team_1_name": match.get("equipe1Libelle", "Nom non disponible"),
-        "team_1_score": match.get("equipe1Score") if match.get("equipe1Score") != "" else None,
+        "team_1_score": parse_score(match.get("equipe1Score")),
         "team_2_name": match.get("equipe2Libelle", "Nom non disponible"),
-        "team_2_score": match.get("equipe2Score") if match.get("equipe2Score") != "" else None,
+        "team_2_score": parse_score(match.get("equipe2Score")),
         "match_link": None,
         "competition": category,
         "journee": match.get("journeeNumero", default_journee),

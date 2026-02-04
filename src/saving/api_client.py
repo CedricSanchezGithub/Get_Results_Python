@@ -1,15 +1,18 @@
 import logging
+import random
 import time
 import requests
 from typing import List
 
-from src.models.models import MatchIngest
-from src.settings import get_backend_settings
+from src.models.models import MatchIngest, RankingIngest
+from src.settings import get_backend_settings, get_scraper_settings
 
 logger = logging.getLogger(__name__)
 
 
 class IngestClient:
+    """Client HTTP pour l'ingestion des données vers le backend."""
+
     # Codes HTTP pour lesquels on ne retry pas (erreurs client)
     NON_RETRYABLE_STATUS_CODES = {400, 401, 403, 404, 422}
 
@@ -20,10 +23,14 @@ class IngestClient:
             base_delay: Délai initial en secondes pour le backoff exponentiel (défaut: 1.0)
         """
         backend_settings = get_backend_settings()
+        scraper_settings = get_scraper_settings()
+
         self.api_url = backend_settings.api_url
+        self.rankings_api_url = backend_settings.effective_rankings_url
         self.api_key = backend_settings.api_key
         self.max_retries = max_retries
         self.base_delay = base_delay
+        self.timeout = scraper_settings.request_timeout
 
         if not self.api_key:
             logger.warning("⚠️ Aucune API KEY définie (BACKEND_API_KEY). Les requêtes risquent d'échouer (401/403).")
@@ -35,36 +42,28 @@ class IngestClient:
             "User-Agent": "GetResults-Scraper/1.0"
         })
 
-    def _is_retryable_error(self, response: requests.Response = None, exception: Exception = None) -> bool:
-        """Détermine si l'erreur justifie un retry."""
-        if exception is not None:
-            # Erreurs réseau = toujours retry
-            return True
-        if response is not None:
-            # Erreurs 5xx = retry, erreurs 4xx = non
-            return response.status_code >= 500
-
-        return False
-
-    def send_matches(self, matches: List[MatchIngest]) -> bool:
+    def _send_batch(self, url: str, payload: list, item_type: str) -> bool:
         """
-        Envoie un batch de matchs au backend avec retry automatique.
-        Retourne True si succès, False sinon.
-        """
-        if not matches:
-            return True
+        Envoie un batch de données au backend avec retry et backoff exponentiel.
 
-        payload = [m.model_dump(mode='json') for m in matches]
+        Args:
+            url: URL de l'endpoint
+            payload: Liste de dictionnaires à envoyer
+            item_type: Type d'élément pour les logs ("matchs" ou "classements")
+
+        Returns:
+            True si succès, False sinon.
+        """
         last_exception = None
         last_response = None
 
         for attempt in range(1, self.max_retries + 1):
             try:
-                logger.info(f"📤 Envoi de {len(matches)} matchs vers {self.api_url} (tentative {attempt}/{self.max_retries})...")
-                response = self.session.post(self.api_url, json=payload, timeout=10)
+                logger.info(f"📤 Envoi de {len(payload)} {item_type} vers {url} (tentative {attempt}/{self.max_retries})...")
+                response = self.session.post(url, json=payload, timeout=self.timeout)
 
                 if response.status_code in (200, 201):
-                    logger.info("✅ Ingestion réussie.")
+                    logger.info(f"✅ Ingestion {item_type} réussie.")
                     return True
 
                 last_response = response
@@ -84,9 +83,9 @@ class IngestClient:
                 last_exception = e
                 logger.warning(f"⚠️ Erreur réseau : {e}")
 
-            # Backoff exponentiel avant le prochain retry (sauf si dernière tentative)
+            # Backoff exponentiel + jitter avant le prochain retry
             if attempt < self.max_retries:
-                delay = self.base_delay * (2 ** (attempt - 1))  # 1s, 2s, 4s...
+                delay = self.base_delay * (2 ** (attempt - 1)) + random.uniform(0, 0.5)
                 logger.info(f"⏳ Attente de {delay:.1f}s avant retry...")
                 time.sleep(delay)
 
@@ -97,3 +96,29 @@ class IngestClient:
             logger.error(f"🔥 Échec définitif après {self.max_retries} tentatives. Dernier status : {last_response.status_code}")
 
         return False
+
+    def send_matches(self, matches: List[MatchIngest]) -> bool:
+        """
+        Envoie un batch de matchs au backend.
+        Retourne True si succès, False sinon.
+        """
+        if not matches:
+            return True
+
+        payload = [m.model_dump(mode='json') for m in matches]
+        return self._send_batch(self.api_url, payload, "matchs")
+
+    def send_rankings(self, rankings: List[RankingIngest]) -> bool:
+        """
+        Envoie un batch de classements au backend.
+        Retourne True si succès, False sinon.
+        """
+        if not rankings:
+            return True
+
+        if not self.rankings_api_url:
+            logger.warning("⚠️ Aucune URL de rankings configurée (BACKEND_RANKINGS_API_URL). Envoi ignoré.")
+            return False
+
+        payload = [r.model_dump(mode='json') for r in rankings]
+        return self._send_batch(self.rankings_api_url, payload, "classements")

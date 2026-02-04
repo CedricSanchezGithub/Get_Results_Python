@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Tuple, Optional
 import requests
 from bs4 import BeautifulSoup
 from src.scraping.get_ranking import parse_ranking_list
+from src.settings import get_scraper_settings
 from src.utils.rate_limiter import get_rate_limiter
 
 logger = logging.getLogger(__name__)
@@ -88,7 +89,8 @@ def get_ranking_from_api(url_page: str, poule_id_fallback: str = None) -> Tuple[
         # 1. Page Initiale (Récupération de la clé contextuelle)
         logger.info(f"🌍 Fetch page initiale: {url_page}")
         limiter.wait()
-        resp = session.get(url_page, timeout=10)
+        timeout = get_scraper_settings().request_timeout
+        resp = session.get(url_page, timeout=timeout)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, 'html.parser')
 
@@ -122,7 +124,7 @@ def get_ranking_from_api(url_page: str, poule_id_fallback: str = None) -> Tuple[
 
         logger.debug(f"📡 Appel API: {api_url}")
         limiter.wait()
-        api_resp = session.get(api_url, timeout=10)
+        api_resp = session.get(api_url, timeout=timeout)
 
         if api_resp.status_code >= 400:
             logger.error(f"❌ Erreur API HTTP {api_resp.status_code}")
@@ -138,13 +140,24 @@ def get_ranking_from_api(url_page: str, poule_id_fallback: str = None) -> Tuple[
         data = json.loads(decrypted_json_str)
 
         # 4. Extraction des Données
-        # A. Le Titre Officiel (Exploration des clés probables)
+        # A. Le Titre Officiel
+        # Priorité 1: Depuis la réponse API (si présent)
         official_title = (
                 data.get('title') or
                 data.get('label') or
                 data.get('nom') or
                 data.get('competition', {}).get('name')
         )
+
+        # Priorité 2: Extraction depuis le <title> HTML (fallback robuste)
+        if not official_title:
+            title_tag = soup.find('title')
+            if title_tag:
+                title_text = title_tag.get_text()
+                # Pattern: "Nom Compétition - Type Page - FFH"
+                parts = title_text.split(' - ')
+                if parts:
+                    official_title = parts[0].strip()
 
         # Nettoyage HTML éventuel dans le titre (ex: &amp;)
         if official_title and isinstance(official_title, str):

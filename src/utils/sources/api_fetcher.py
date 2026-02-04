@@ -2,7 +2,7 @@ import requests
 import logging
 import time
 
-from src.settings import get_source_api_settings
+from src.settings import get_source_api_settings, get_scraper_settings
 
 
 def get_urls_from_api():
@@ -24,7 +24,8 @@ def get_urls_from_api():
         try:
             logger.info(f"Tentative {attempt + 1}/{max_retries} : Appel API vers {api_url}")
 
-            response = requests.get(api_url, headers=headers, timeout=10)
+            timeout = get_scraper_settings().request_timeout
+            response = requests.get(api_url, headers=headers, timeout=timeout)
 
             if response.status_code == 403:
                 logger.error("❌ Erreur 403 Forbidden : Clé API refusée.")
