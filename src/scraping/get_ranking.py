@@ -34,7 +34,7 @@ def parse_ranking_list(ranking_list: List[Dict]) -> List[Dict]:
                 if val is not None:
                     try:
                         return int(val)
-                    except:
+                    except (ValueError, TypeError):
                         pass
             return default
 
@@ -51,8 +51,8 @@ def parse_ranking_list(ranking_list: List[Dict]) -> List[Dict]:
             "draws": get_int(["draws", "nuls", "nul"]),
             "lost": get_int(["lost", "perdus", "perdu"]),
             "goal_diff": get_int(["goalDifference", "diff", "difference"]),
-            "goals_for": get_int(["goalsFor", "butsPour"]),
-            "goals_against": get_int(["goalsAgainst", "butsContre"])
+            "goals_for": get_int(["goalsFor", "butsPour", "butPlus"]),
+            "goals_against": get_int(["goalsAgainst", "butsContre", "butMoins"])
         }
         parsed_ranking.append(team_data)
 
