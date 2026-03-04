@@ -39,7 +39,8 @@ def _extract_context_from_url(url: str) -> Dict[str, str]:
 
     for key, pattern in patterns.items():
         match = re.search(pattern, url)
-        if match: params[key] = match.group(1)
+        if match:
+            params[key] = match.group(1)
 
     comp_match = re.search(r'/([^/]+)/poule-(\d+)', url)
     if comp_match:

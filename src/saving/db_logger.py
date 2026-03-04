@@ -36,7 +36,7 @@ def update_log_entry(log_id: int, status: str, duration: float, message: str = N
         return
 
     sql = """
-    UPDATE scraping_log 
+    UPDATE scraping_log
     SET finished_at = %s, status = %s, duration_seconds = %s, message = %s
     WHERE id = %s
     """

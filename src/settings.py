@@ -188,7 +188,7 @@ class Settings(BaseSettings):
         return v_upper
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """
     Retourne l'instance singleton des settings.

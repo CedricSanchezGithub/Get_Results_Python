@@ -11,7 +11,6 @@ from bs4 import BeautifulSoup
 from typing import List, Dict, Tuple, Optional
 
 from src.config import DEBUG_DIR
-from src.scraping.get_ranking import extract_ranking_from_soup
 from src.scraping.get_ranking_api import get_ranking_from_api
 from src.settings import get_scraper_settings
 from src.utils.format_date import format_date

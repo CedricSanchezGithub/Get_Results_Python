@@ -1,5 +1,4 @@
-import pytest
-from datetime import datetime, timezone
+from datetime import timezone
 from src.utils.format_date import format_date
 
 

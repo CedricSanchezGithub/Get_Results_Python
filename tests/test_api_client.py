@@ -4,11 +4,14 @@ from datetime import datetime, timezone
 
 from src.saving.api_client import IngestClient
 from src.models.models import MatchIngest
+from src.settings import get_settings
 
 
 @pytest.fixture
 def ingest_client():
     """Client d'ingestion avec configuration de test."""
+    get_settings.cache_clear()
+
     with patch.dict("os.environ", {
         "BACKEND_API_URL": "http://test-api/ingest",
         "BACKEND_API_KEY": "test-key"
@@ -132,7 +135,6 @@ class TestIngestClientRetry:
 
     def test_jitter_adds_randomness(self, ingest_client, sample_matches):
         """Vérifie que le jitter ajoute de l'aléatoire au délai."""
-        import time
         delays = []
 
         def capture_delay(seconds):

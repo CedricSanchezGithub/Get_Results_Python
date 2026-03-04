@@ -1,7 +1,6 @@
 import pytest
 import time
 import threading
-from unittest.mock import patch
 
 
 class TestRateLimiter:
@@ -93,7 +92,6 @@ class TestRateLimiter:
 
         threads = [threading.Thread(target=worker) for _ in range(5)]
 
-        start = time.time()
         for t in threads:
             t.start()
         for t in threads:
