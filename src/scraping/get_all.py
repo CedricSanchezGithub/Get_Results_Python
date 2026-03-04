@@ -2,7 +2,7 @@ import logging
 import re
 from typing import List, Dict, Tuple, Optional
 
-from src.models.models import MatchIngest
+from src.models.models import MatchIngest, RankingIngest
 from src.saving.api_client import IngestClient
 from src.scraping.get_match_results import get_matches_from_url
 
@@ -39,48 +39,94 @@ def _map_to_ingest_model(raw_match: Dict, category: str, pool_id: str) -> Option
         return None
 
 
+def _map_to_ranking_model(raw_ranking: Dict, category: str, pool_id: str, official_phase_name: Optional[str] = None) -> Optional[RankingIngest]:
+    """Transforme le dictionnaire brut du classement en Modèle Pydantic."""
+    try:
+        return RankingIngest(
+            team_name=raw_ranking['team_name'],
+            rank=raw_ranking.get('rank', 0),
+            points=raw_ranking.get('points', 0),
+            matches_played=raw_ranking.get('matches_played', 0),
+            won=raw_ranking.get('won', 0),
+            draws=raw_ranking.get('draws', 0),
+            lost=raw_ranking.get('lost', 0),
+            goals_for=raw_ranking.get('goals_for', 0),
+            goals_against=raw_ranking.get('goals_against', 0),
+            goal_diff=raw_ranking.get('goal_diff', 0),
+            category=category,
+            pool_id=pool_id,
+            official_phase_name=official_phase_name or raw_ranking.get('official_phase_name')
+        )
+    except Exception as e:
+        logger.warning(f"⚠️ Classement invalide ignoré : {e} | Data: {raw_ranking}")
+        return None
+
+
 def get_all(url_start: str, category: str):
     logger.info(f"🚀 [Start] Scraping '{category}' via {url_start}")
 
     all_match_data = []
+    ranking_data = []
+    official_phase_name = None
 
-    # ... (Logique existante de scraping inchangée : fetch_initial_page, pagination ...) ...
-    # Supposons que tu aies récupéré 'all_match_data' (liste de dicts) comme avant.
-
-    # 1. Scraping Page Initiale
-    initial_matches, journees_meta, _ = _fetch_initial_page(url_start, category)
+    # 1. Scraping Page Initiale (matchs + classement)
+    initial_matches, journees_meta, initial_ranking = _fetch_initial_page(url_start, category)
     all_match_data.extend(initial_matches)
+
+    # Récupérer le nom officiel de la phase depuis les matchs (s'il existe)
+    if initial_matches and initial_matches[0].get('official_phase_name'):
+        official_phase_name = initial_matches[0]['official_phase_name']
+
+    # Conserver le classement de la première page
+    if initial_ranking:
+        ranking_data = initial_ranking
 
     # 2. Scraping Pagination
     urls_to_visit = _build_pagination_urls(url_start, journees_meta)
-    paginated_matches, _ = _fetch_paginated_pages(urls_to_visit, category)
+    paginated_matches, paginated_ranking = _fetch_paginated_pages(urls_to_visit, category)
     all_match_data.extend(paginated_matches)
 
-    # 3. Récupération API (Classement) -> Pour l'instant on ignore le classement dans ce refacto
-    # car ton ticket ne mentionne que l'endpoint /api/ingest/matches.
-    # Si un endpoint /api/ingest/rankings existe, il faudra reproduire la logique.
+    # Si pas de ranking initial, utiliser celui trouvé dans la pagination
+    if not ranking_data and paginated_ranking:
+        ranking_data = paginated_ranking
 
-    # 4. Transformation et Envoi via API
+    # 3. Transformation et Envoi via API
     poule_id = _extract_poule_id(url_start)
     effective_pool_id = poule_id if poule_id else f"UNKNOWN_{category}"
 
+    # 3.1 Envoi des Matchs
     if all_match_data:
-        # Transformation Dict -> Pydantic
         ingest_batch = []
         for m in all_match_data:
             model = _map_to_ingest_model(m, category, effective_pool_id)
             if model:
                 ingest_batch.append(model)
 
-        # Envoi HTTP
         if ingest_batch:
             success = ingest_client.send_matches(ingest_batch)
             if success:
                 logger.info(f"💾 {len(ingest_batch)} Matchs envoyés au Backend.")
             else:
-                logger.error("❌ Echec de l'envoi au Backend.")
+                logger.error("❌ Echec de l'envoi des matchs au Backend.")
     else:
         logger.warning(f"⚠️ Aucun match trouvé pour '{category}'")
+
+    # 3.2 Envoi du Classement
+    if ranking_data:
+        ranking_batch = []
+        for r in ranking_data:
+            model = _map_to_ranking_model(r, category, effective_pool_id, official_phase_name)
+            if model:
+                ranking_batch.append(model)
+
+        if ranking_batch:
+            success = ingest_client.send_rankings(ranking_batch)
+            if success:
+                logger.info(f"🏆 {len(ranking_batch)} Classements envoyés au Backend.")
+            else:
+                logger.error("❌ Echec de l'envoi des classements au Backend.")
+    else:
+        logger.warning(f"⚠️ Aucun classement trouvé pour '{category}'")
 
     logger.info(f"🏁 [End] Scraping terminé pour '{category}'")
 

@@ -54,19 +54,33 @@ class BackendAPISettings(BaseSettings):
 
     api_url: Optional[str] = Field(
         default=None,
-        description="URL de l'endpoint d'ingestion"
+        description="URL de l'endpoint d'ingestion des matchs"
+    )
+    rankings_api_url: Optional[str] = Field(
+        default=None,
+        description="URL de l'endpoint d'ingestion des classements"
     )
     api_key: Optional[str] = Field(
         default=None,
         description="Clé API pour l'authentification"
     )
 
-    @field_validator("api_url")
+    @field_validator("api_url", "rankings_api_url")
     @classmethod
     def validate_url(cls, v: Optional[str]) -> Optional[str]:
         if v and not v.startswith(("http://", "https://")):
             raise ValueError("L'URL doit commencer par http:// ou https://")
         return v
+
+    @property
+    def effective_rankings_url(self) -> Optional[str]:
+        """Retourne l'URL des rankings, dérivée de api_url si non spécifiée."""
+        if self.rankings_api_url:
+            return self.rankings_api_url
+        if self.api_url:
+            # Dérive /api/ingest/rankings depuis /api/ingest/matches
+            return self.api_url.replace("/matches", "/rankings")
+        return None
 
 
 class SourceAPISettings(BaseSettings):
