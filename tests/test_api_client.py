@@ -46,8 +46,7 @@ class TestIngestClientInit:
         with patch("src.saving.api_client.get_backend_settings") as mock_settings:
             mock_settings.return_value = BackendAPISettings(
                 api_url="http://test",
-                api_key=None,
-                _env_file=None
+                api_key=None
             )
             client = IngestClient()
             assert client.api_key is None
@@ -192,10 +191,9 @@ class TestIngestClientSendRankings:
             mock_backend.return_value = BackendAPISettings(
                 api_url=None,
                 rankings_api_url=None,
-                api_key="test",
-                _env_file=None
+                api_key="test"
             )
-            mock_scraper.return_value = ScraperSettings(_env_file=None)
+            mock_scraper.return_value = ScraperSettings()
             client = IngestClient()
 
             result = client.send_rankings(sample_rankings)

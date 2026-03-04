@@ -19,3 +19,5 @@ APScheduler>=3.10.0
 
 # Dev / Test
 pytest>=8.0.0
+ruff>=0.1.0
+mypy>=1.0.0
