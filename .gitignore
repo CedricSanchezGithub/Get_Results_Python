@@ -28,4 +28,4 @@ htmlcov/
 data/
 debug_*.html
 debug_logos_output/
-index.html
+dump_sources_html/index.html

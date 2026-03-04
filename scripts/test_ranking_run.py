@@ -1,4 +1,3 @@
-import logging
 from src.scraping.get_all import get_all
 from src.utils.logging_config import configure_logging
 
