@@ -1,0 +1,36 @@
+line-length = 100
+target-version = "py310"
+
+[lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "B",     # flake8-bugbear
+    "C4",    # flake8-comprehensions
+    "UP",    # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "I001",  # import block is un-sorted (too many to fix now)
+    "UP035", # typing module is deprecated
+    "UP006", # use list instead of List
+    "UP045", # use X | None instead of Optional
+    "W292",  # no newline at end of file
+    "E701",  # multiple statements on one line
+    "E402",  # module level import not at top of file
+    "F541",  # f-string without any placeholders
+    "E722",  # do not use bare except
+    "B023",  # function definition does not bind loop variable
+]
+
+[lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["B011"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
