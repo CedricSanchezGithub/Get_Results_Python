@@ -14,7 +14,7 @@ try:
     from urllib3.exceptions import NotOpenSSLWarning
 
     # On fait taire le warning SSL inutile sur Mac
-    warnings.simplefilter('ignore', NotOpenSSLWarning)
+    warnings.simplefilter("ignore", NotOpenSSLWarning)
 except ImportError:
     print("Erreur: Il manque des librairies. Lance: pip install requests beautifulsoup4")
     sys.exit(1)
@@ -51,12 +51,11 @@ TARGET_URLS = [
     "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-11-feminins-28963/classements/",
     "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/coupe-de-l-herault-13-f-29043/classements/",
     "https://www.ffhandball.fr/competitions/saison-2025-2026-21/departemental/championnat-13-feminins-28964/classements/",
-
     "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-2e-division-28373/poule-172423/classements/",
     "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/15-ans-f-1ere-division-28372/poule-169159/classements/",
     "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/18-ans-f-2e-division-28369/poule-172464/classements/",
     "https://www.ffhandball.fr/competitions/saison-2025-2026-21/coupe-de-france/coupe-de-france-regionale-feminine-2025-26-29113/poule-173664/classements/",
-    "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-f-prenationale-28365/poule-169120/classements/"
+    "https://www.ffhandball.fr/competitions/saison-2025-2026-21/regional/16-ans-f-prenationale-28365/poule-169120/classements/",
 ]
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -65,12 +64,13 @@ logger = logging.getLogger("BATCH_LOGOS")
 
 # --- FONCTIONS UTILITAIRES ---
 
+
 def sanitize_url(url: str) -> str:
     """
     Nettoie l'URL pour faciliter le scraping.
     Si une poule est détectée, on retourne la racine de la poule pour éviter les erreurs de blocs.
     """
-    match = re.search(r'(.*?/poule-\d+/)', url)
+    match = re.search(r"(.*?/poule-\d+/)", url)
     if match:
         return match.group(1)
     return url
@@ -86,15 +86,16 @@ def xor_decipher(payload, key: str) -> str:
     try:
         decoded_bytes = base64.b64decode(payload)
         key_len = len(key)
-        key_bytes = key.encode('utf-8')
+        key_bytes = key.encode("utf-8")
         return "".join([chr(byte ^ key_bytes[i % key_len]) for i, byte in enumerate(decoded_bytes)])
     except Exception:
         return ""
 
 
 def build_logo_url(filename: str) -> str:
-    if not filename: return ""
-    base = filename.rsplit('.', 1)[0]
+    if not filename:
+        return ""
+    base = filename.rsplit(".", 1)[0]
     return f"{FFHB_LOGO_CDN}/{LOGO_SIZE}/{base}.webp"
 
 
@@ -102,7 +103,7 @@ def download_image(url: str, dest_path: str):
     try:
         r = requests.get(url, stream=True, timeout=5)
         if r.status_code == 200:
-            with open(dest_path, 'wb') as f:
+            with open(dest_path, "wb") as f:
                 for chunk in r.iter_content(1024):
                     f.write(chunk)
             return True
@@ -110,7 +111,9 @@ def download_image(url: str, dest_path: str):
         return False
 
 
-# --- MOTEUR DE BATCH ---
+def sanitize_filename(name: str) -> str:
+    return re.sub(r"[^\w\-]", "_", name)
+
 
 def run_batch_sync(urls):
     if not os.path.exists(OUTPUT_DIR):
@@ -118,9 +121,11 @@ def run_batch_sync(urls):
         logger.info(f"📁 Dossier de sortie : {OUTPUT_DIR}")
 
     session = requests.Session()
-    session.headers.update({
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    })
+    session.headers.update(
+        {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        }
+    )
 
     print(f"🚀 Démarrage du scan sur {len(urls)} URLs...")
     print("=" * 60)
@@ -130,7 +135,7 @@ def run_batch_sync(urls):
         clean_url = sanitize_url(url)
 
         # Extraction contextuelle AVANT appel
-        comp_match = re.search(r'/([^/]+)/poule-(\d+)', clean_url)
+        comp_match = re.search(r"/([^/]+)/poule-(\d+)", clean_url)
         if not comp_match:
             print(f"[{i:02d}] ⚠️  SKIP | Pas d'ID de poule trouvé dans l'URL.")
             continue
@@ -146,8 +151,8 @@ def run_batch_sync(urls):
                 print(f"[{i:02d}] ❌ FAIL | HTTP {resp.status_code}")
                 continue
 
-            soup = BeautifulSoup(resp.text, 'html.parser')
-            data_cfk = soup.find('body').get('data-cfk')
+            soup = BeautifulSoup(resp.text, "html.parser")
+            data_cfk = soup.find("body").get("data-cfk")
 
             if not data_cfk:
                 print(f"[{i:02d}] ❌ FAIL | Pas de clé CFK.")
@@ -155,8 +160,8 @@ def run_batch_sync(urls):
 
             # 3. Détection intelligente du bloc
             target_block_name = None
-            for c in soup.find_all('smartfire-component'):
-                name = c.get('name', '')
+            for c in soup.find_all("smartfire-component"):
+                name = c.get("name", "")
                 if "ranking" in name or "classement" in name or "classification" in name:
                     target_block_name = name
                     break  # On prend le premier trouvé
@@ -165,7 +170,7 @@ def run_batch_sync(urls):
                 target_block_name = "competitions---new-competition-phase-ranking"
 
             # 4. Appel API
-            saison_match = re.search(r'saison-\d{4}-\d{4}-(\d+)', clean_url)
+            saison_match = re.search(r"saison-\d{4}-\d{4}-(\d+)", clean_url)
             saison_id = saison_match.group(1) if saison_match else "21"  # Default to current
 
             comp_type = "regional"
@@ -179,7 +184,7 @@ def run_batch_sync(urls):
                 "ext_saison_id": saison_id,
                 "url_competition_type": comp_type,
                 "url_competition": comp_slug,
-                "ext_poule_id": poule_id
+                "ext_poule_id": poule_id,
             }
 
             api_url = f"https://www.ffhandball.fr/wp-json/competitions/v1/computeBlockAttributes?{urlencode(params)}"
@@ -198,7 +203,9 @@ def run_batch_sync(urls):
                 continue
 
             data = json.loads(decrypted)
-            teams = (data.get('ranking') or data.get('classification') or data.get('classements') or [])
+            teams = (
+                data.get("ranking") or data.get("classification") or data.get("classements") or []
+            )
 
             if not teams:
                 print(f"[{i:02d}] ⚠️  VIDE | Liste équipes vide pour poule {poule_id}")
@@ -208,18 +215,22 @@ def run_batch_sync(urls):
             new_dl = 0
             existing = 0
             for team in teams:
-                club_id = team.get('ext_structureId')
-                raw_logo = team.get('structure_logo')
+                club_id = team.get("ext_structureId")
+                raw_logo = team.get("structure_logo")
+                team_name = team.get("equipe_libelle", "")
 
                 if club_id and raw_logo:
-                    local_path = os.path.join(OUTPUT_DIR, f"{club_id}.webp")
+                    safe_name = sanitize_filename(team_name) if team_name else club_id
+                    local_path = os.path.join(OUTPUT_DIR, f"{safe_name}.webp")
                     if not os.path.exists(local_path):
                         if download_image(build_logo_url(raw_logo), local_path):
                             new_dl += 1
                     else:
                         existing += 1
 
-            print(f"[{i:02d}] ✅ OK   | Poule {poule_id} : {new_dl} téléchargés, {existing} déjà présents.")
+            print(
+                f"[{i:02d}] ✅ OK   | Poule {poule_id} : {new_dl} téléchargés, {existing} déjà présents."
+            )
 
         except Exception as e:
             print(f"[{i:02d}] 🔥 ERR  | {e}")
