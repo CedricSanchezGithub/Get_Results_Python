@@ -29,3 +29,9 @@ data/
 debug_*.html
 debug_logos_output/
 dump_sources_html/index.html
+
+# IDE / Local files
+.idea/dataSources.xml
+continue.md
+dump.sql
+ROADMAP.md
