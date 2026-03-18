@@ -2,7 +2,7 @@ import logging
 import re
 from typing import List, Dict, Tuple, Optional
 
-from src.models.models import MatchIngest, RankingIngest
+from src.models.models import MatchIngest, RankingIngest, TeamIngest
 from src.saving.api_client import IngestClient
 from src.scraping.get_match_results import get_matches_from_url
 from src.utils.metrics import timed_operation, log_summary, reset_metrics
@@ -15,11 +15,42 @@ ingest_client = IngestClient()
 
 
 def _extract_poule_id(url: str) -> Optional[str]:
-    match = re.search(r'poule-(\d+)', url)
+    match = re.search(r"poule-(\d+)", url)
     return match.group(1) if match else None
 
 
-def _ingest_matches(all_match_data: List[Dict], category: str, url_start: str) -> None:
+def _ingest_teams(ranking_data: List[Dict]) -> Dict[str, int]:
+    """
+    Étape 1 ETL : construit le référentiel équipes depuis les données de classement.
+    Envoie un upsert au backend et retourne le mapping { team_name: team_id }.
+    Ce mapping est utilisé par les étapes suivantes pour résoudre les IDs.
+    """
+    seen: Dict[str, Optional[str]] = {}
+    for r in ranking_data:
+        name = r.get("team_name", "").strip()
+        if name and name not in seen:
+            seen[name] = r.get("logo_filename")
+
+    if not seen:
+        logger.warning("⚠️ Aucune équipe extraite des classements pour constituer le référentiel.")
+        return {}
+
+    teams_batch = [TeamIngest(team_name=name, logo_filename=logo) for name, logo in seen.items()]
+
+    mapping = ingest_client.send_teams(teams_batch)
+    if mapping:
+        logger.info(f"🏷️ Référentiel équipes chargé : {len(mapping)} équipes indexées.")
+    else:
+        logger.warning(
+            "⚠️ Le référentiel équipes est vide ou l'envoi a échoué. Les IDs seront null."
+        )
+
+    return mapping
+
+
+def _ingest_matches(
+    all_match_data: List[Dict], category: str, url_start: str, team_mapping: Dict[str, int]
+) -> None:
     """Ingère les matchs vers le backend."""
     pige_id = _extract_poule_id(url_start)
     effective_pool_id = pige_id if pige_id else f"UNKNOWN_{category}"
@@ -27,7 +58,7 @@ def _ingest_matches(all_match_data: List[Dict], category: str, url_start: str) -
     if all_match_data:
         ingest_batch = []
         for m in all_match_data:
-            model = _map_to_ingest_model(m, category, effective_pool_id)
+            model = _map_to_ingest_model(m, category, effective_pool_id, team_mapping)
             if model:
                 ingest_batch.append(model)
 
@@ -41,7 +72,13 @@ def _ingest_matches(all_match_data: List[Dict], category: str, url_start: str) -
         logger.warning(f"⚠️ Aucun match trouvé pour '{category}'")
 
 
-def _ingest_rankings(ranking_data: List[Dict], category: str, url_start: str, official_phase_name: Optional[str] = None) -> None:
+def _ingest_rankings(
+    ranking_data: List[Dict],
+    category: str,
+    url_start: str,
+    team_mapping: Dict[str, int],
+    official_phase_name: Optional[str] = None,
+) -> None:
     """Ingère les classements vers le backend."""
     pige_id = _extract_poule_id(url_start)
     effective_pool_id = pige_id if pige_id else f"UNKNOWN_{category}"
@@ -49,7 +86,9 @@ def _ingest_rankings(ranking_data: List[Dict], category: str, url_start: str, of
     if ranking_data:
         ranking_batch = []
         for r in ranking_data:
-            model = _map_to_ranking_model(r, category, effective_pool_id, official_phase_name)
+            model = _map_to_ranking_model(
+                r, category, effective_pool_id, team_mapping, official_phase_name
+            )
             if model:
                 ranking_batch.append(model)
 
@@ -63,44 +102,73 @@ def _ingest_rankings(ranking_data: List[Dict], category: str, url_start: str, of
         logger.warning(f"⚠️ Aucun classement trouvé pour '{category}'")
 
 
-def _map_to_ingest_model(raw_match: Dict, category: str, pool_id: str) -> Optional[MatchIngest]:
+def _map_to_ingest_model(
+    raw_match: Dict, category: str, pool_id: str, team_mapping: Dict[str, int]
+) -> Optional[MatchIngest]:
     """Transforme le dictionnaire brut du scraper en Modèle Pydantic Strict."""
     try:
-        # Mapping explicite des champs
+        team_1_name = raw_match.get("team_1_name", "")
+        team_2_name = raw_match.get("team_2_name", "")
+        team_1_id = team_mapping.get(team_1_name)
+        team_2_id = team_mapping.get(team_2_name)
+
+        if not team_1_id:
+            logger.warning(
+                f"⚠️ Équipe '{team_1_name}' introuvable dans le référentiel. team_1_id sera null."
+            )
+        if not team_2_id:
+            logger.warning(
+                f"⚠️ Équipe '{team_2_name}' introuvable dans le référentiel. team_2_id sera null."
+            )
+
         # Note: 'journee' du scraper devient 'round' pour l'API
         return MatchIngest(
-            match_date=raw_match['match_date'],  # Doit déjà être un datetime ou str ISO valide
-            team_1_name=raw_match['team_1_name'],
-            team_1_score=raw_match['team_1_score'],
-            team_2_name=raw_match['team_2_name'],
-            team_2_score=raw_match['team_2_score'],
+            match_date=raw_match["match_date"],
+            team_1_id=team_1_id,
+            team_1_score=raw_match.get("team_1_score"),
+            team_2_id=team_2_id,
+            team_2_score=raw_match.get("team_2_score"),
             category=category,
             pool_id=pool_id,
-            official_phase_name=raw_match.get('official_phase_name'),
-            round=str(raw_match.get('journee')) if raw_match.get('journee') else None
+            official_phase_name=raw_match.get("official_phase_name"),
+            round=str(raw_match.get("journee")) if raw_match.get("journee") else None,
         )
     except Exception as e:
         logger.warning(f"⚠️ Donnée invalide ignorée : {e} | Data: {raw_match}")
         return None
 
 
-def _map_to_ranking_model(raw_ranking: Dict, category: str, pool_id: str, official_phase_name: Optional[str] = None) -> Optional[RankingIngest]:
+def _map_to_ranking_model(
+    raw_ranking: Dict,
+    category: str,
+    pool_id: str,
+    team_mapping: Dict[str, int],
+    official_phase_name: Optional[str] = None,
+) -> Optional[RankingIngest]:
     """Transforme le dictionnaire brut du classement en Modèle Pydantic."""
     try:
+        team_name = raw_ranking.get("team_name", "")
+        team_id = team_mapping.get(team_name)
+
+        if not team_id:
+            logger.warning(
+                f"⚠️ Équipe '{team_name}' introuvable dans le référentiel. team_id sera null."
+            )
+
         return RankingIngest(
-            team_name=raw_ranking['team_name'],
-            rank=raw_ranking.get('rank', 0),
-            points=raw_ranking.get('points', 0),
-            matches_played=raw_ranking.get('matches_played', 0),
-            won=raw_ranking.get('won', 0),
-            draws=raw_ranking.get('draws', 0),
-            lost=raw_ranking.get('lost', 0),
-            goals_for=raw_ranking.get('goals_for', 0),
-            goals_against=raw_ranking.get('goals_against', 0),
-            goal_diff=raw_ranking.get('goal_diff', 0),
+            team_id=team_id,
+            rank=raw_ranking.get("rank", 0),
+            points=raw_ranking.get("points", 0),
+            matches_played=raw_ranking.get("matches_played", 0),
+            won=raw_ranking.get("won", 0),
+            draws=raw_ranking.get("draws", 0),
+            lost=raw_ranking.get("lost", 0),
+            goals_for=raw_ranking.get("goals_for", 0),
+            goals_against=raw_ranking.get("goals_against", 0),
+            goal_diff=raw_ranking.get("goal_diff", 0),
             category=category,
             pool_id=pool_id,
-            official_phase_name=official_phase_name or raw_ranking.get('official_phase_name')
+            official_phase_name=official_phase_name or raw_ranking.get("official_phase_name"),
         )
     except Exception as e:
         logger.warning(f"⚠️ Classement invalide ignoré : {e} | Data: {raw_ranking}")
@@ -121,8 +189,8 @@ def get_all(url_start: str, category: str):
         all_match_data.extend(initial_matches)
 
         # Récupérer le nom officiel de la phase depuis les matchs (s'il existe)
-        if initial_matches and initial_matches[0].get('official_phase_name'):
-            official_phase_name = initial_matches[0]['official_phase_name']
+        if initial_matches and initial_matches[0].get("official_phase_name"):
+            official_phase_name = initial_matches[0]["official_phase_name"]
 
         # Conserver le classement de la première page
         if initial_ranking:
@@ -138,11 +206,17 @@ def get_all(url_start: str, category: str):
             ranking_data = paginated_ranking
 
         # 3. Transformation et Envoi via API
-        with timed_operation("ingest_matches", category=category, count=len(all_match_data)):
-            _ingest_matches(all_match_data, category, url_start)
+        # Étape 1 ETL : référentiel équipes (doit être chargé en premier)
+        with timed_operation("ingest_teams", category=category, count=len(ranking_data)):
+            team_mapping = _ingest_teams(ranking_data)
 
+        # Étape 2 ETL : classements (utilise team_mapping pour résoudre les IDs)
         with timed_operation("ingest_rankings", category=category, count=len(ranking_data)):
-            _ingest_rankings(ranking_data, category, url_start, official_phase_name)
+            _ingest_rankings(ranking_data, category, url_start, team_mapping, official_phase_name)
+
+        # Étape 3 ETL : matchs (utilise team_mapping pour résoudre les IDs)
+        with timed_operation("ingest_matches", category=category, count=len(all_match_data)):
+            _ingest_matches(all_match_data, category, url_start, team_mapping)
 
     log_summary()
     logger.info(f"🏁 [End] Scraping terminé pour '{category}'")
