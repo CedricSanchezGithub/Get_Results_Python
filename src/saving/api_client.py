@@ -17,9 +17,6 @@ class IngestClient:
     NON_RETRYABLE_STATUS_CODES = {400, 401, 403, 404, 422}
 
     def __init__(self, max_retries: int = 3, base_delay: float = 1.0):
-
-        logger.info(f"🔧 Config backend: api_url={self.api_url}, api_key={'***' if self.api_key else None}")
-
         """
         Args:
             max_retries: Nombre maximum de tentatives (défaut: 3)
@@ -35,6 +32,10 @@ class IngestClient:
         self.max_retries = max_retries
         self.base_delay = base_delay
         self.timeout = scraper_settings.request_timeout
+
+        logger.info(
+            f"🔧 Config backend: api_url={self.api_url}, api_key={'***' if self.api_key else None}"
+        )
 
         if not self.api_key:
             logger.warning(
