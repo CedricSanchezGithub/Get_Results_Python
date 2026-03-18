@@ -19,7 +19,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install ruff
+          pip install ruff==0.15.4
 
       - name: Run ruff
         run: ruff check src/ tests/
