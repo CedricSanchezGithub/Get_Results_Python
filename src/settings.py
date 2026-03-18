@@ -2,6 +2,7 @@
 Configuration centralisée avec validation Pydantic.
 Charge et valide les variables d'environnement au démarrage.
 """
+
 from functools import lru_cache
 from typing import Optional
 
@@ -13,10 +14,7 @@ class DatabaseSettings(BaseSettings):
     """Configuration de la base de données MySQL."""
 
     model_config = SettingsConfigDict(
-        env_prefix="MYSQL_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_prefix="MYSQL_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     host: str = Field(default="localhost", description="Hôte MySQL")
@@ -33,7 +31,7 @@ class DatabaseSettings(BaseSettings):
             "port": self.port,
             "user": self.user,
             "password": self.password,
-            "database": self.database
+            "database": self.database,
         }
 
     @property
@@ -46,25 +44,19 @@ class BackendAPISettings(BaseSettings):
     """Configuration de l'API backend pour l'ingestion des données."""
 
     model_config = SettingsConfigDict(
-        env_prefix="BACKEND_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_prefix="BACKEND_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     api_url: Optional[str] = Field(
-        default=None,
-        description="URL de l'endpoint d'ingestion des matchs"
+        default=None, description="URL de l'endpoint d'ingestion des matchs"
     )
     rankings_api_url: Optional[str] = Field(
-        default=None,
-        description="URL de l'endpoint d'ingestion des classements"
-    )
-    api_key: Optional[str] = Field(
-        default=None,
-        description="Clé API pour l'authentification"
+        default=None, description="URL de l'endpoint d'ingestion des classements"
     )
     api_key: Optional[str] = Field(default=None, description="Clé API pour l'authentification")
+    teams_api_url: Optional[str] = Field(
+        default=None, description="URL de l'endpoint d'ingestion des équipes"
+    )
 
     @field_validator("api_url", "rankings_api_url", "teams_api_url")
     @classmethod
