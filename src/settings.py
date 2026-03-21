@@ -2,6 +2,7 @@
 Configuration centralisée avec validation Pydantic.
 Charge et valide les variables d'environnement au démarrage.
 """
+
 from functools import lru_cache
 from typing import Optional
 
@@ -13,10 +14,7 @@ class DatabaseSettings(BaseSettings):
     """Configuration de la base de données MySQL."""
 
     model_config = SettingsConfigDict(
-        env_prefix="MYSQL_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_prefix="MYSQL_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     host: str = Field(default="localhost", description="Hôte MySQL")
@@ -33,7 +31,7 @@ class DatabaseSettings(BaseSettings):
             "port": self.port,
             "user": self.user,
             "password": self.password,
-            "database": self.database
+            "database": self.database,
         }
 
     @property
@@ -46,26 +44,21 @@ class BackendAPISettings(BaseSettings):
     """Configuration de l'API backend pour l'ingestion des données."""
 
     model_config = SettingsConfigDict(
-        env_prefix="BACKEND_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_prefix="BACKEND_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
     api_url: Optional[str] = Field(
-        default=None,
-        description="URL de l'endpoint d'ingestion des matchs"
+        default=None, description="URL de l'endpoint d'ingestion des matchs"
     )
     rankings_api_url: Optional[str] = Field(
-        default=None,
-        description="URL de l'endpoint d'ingestion des classements"
+        default=None, description="URL de l'endpoint d'ingestion des classements"
     )
-    api_key: Optional[str] = Field(
-        default=None,
-        description="Clé API pour l'authentification"
+    api_key: Optional[str] = Field(default=None, description="Clé API pour l'authentification")
+    teams_api_url: Optional[str] = Field(
+        default=None, description="URL de l'endpoint d'ingestion des équipes"
     )
 
-    @field_validator("api_url", "rankings_api_url")
+    @field_validator("api_url", "rankings_api_url", "teams_api_url")
     @classmethod
     def validate_url(cls, v: Optional[str]) -> Optional[str]:
         if v and not v.startswith(("http://", "https://")):
@@ -82,26 +75,30 @@ class BackendAPISettings(BaseSettings):
             return self.api_url.replace("/matches", "/rankings")
         return None
 
+    @property
+    def effective_teams_url(self) -> Optional[str]:
+        """Retourne l'URL des équipes, dérivée de api_url si non spécifiée."""
+        if self.teams_api_url:
+            return self.teams_api_url
+        if self.api_url:
+            # Dérive /api/ingest/teams depuis /api/ingest/matches
+            return self.api_url.replace("/matches", "/teams")
+        return None
+
 
 class SourceAPISettings(BaseSettings):
     """Configuration de l'API source pour la liste des compétitions."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Ces champs utilisent les noms exacts des variables d'env (sans préfixe)
     api_url: str = Field(
         default="http://backend:8081/api/competitions",
         validation_alias="API_URL",
-        description="URL de l'API des compétitions"
+        description="URL de l'API des compétitions",
     )
     api_key: str = Field(
-        default="secret_local_dev",
-        validation_alias="API_KEY",
-        description="Clé API"
+        default="secret_local_dev", validation_alias="API_KEY", description="Clé API"
     )
 
 
@@ -109,40 +106,22 @@ class ScraperSettings(BaseSettings):
     """Configuration du scraper."""
 
     model_config = SettingsConfigDict(
-        env_prefix="SCRAPER_",
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
+        env_prefix="SCRAPER_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    max_workers: int = Field(
-        default=3,
-        ge=1,
-        le=10,
-        description="Nombre de workers parallèles"
-    )
+    max_workers: int = Field(default=3, ge=1, le=10, description="Nombre de workers parallèles")
     rate_limit_delay: float = Field(
-        default=1.0,
-        ge=0.1,
-        le=10.0,
-        description="Délai minimum entre les requêtes (secondes)"
+        default=1.0, ge=0.1, le=10.0, description="Délai minimum entre les requêtes (secondes)"
     )
     request_timeout: int = Field(
-        default=15,
-        ge=5,
-        le=60,
-        description="Timeout des requêtes HTTP (secondes)"
+        default=15, ge=5, le=60, description="Timeout des requêtes HTTP (secondes)"
     )
 
 
 class Settings(BaseSettings):
     """Configuration globale de l'application."""
 
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     # Sous-configurations (chargées à la demande)
     _db: Optional[DatabaseSettings] = None

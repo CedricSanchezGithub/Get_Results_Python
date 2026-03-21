@@ -9,7 +9,7 @@ from src.utils.logging_config import configure_logging
 from src.scraping.get_all import get_all
 from src.utils.sources.api_fetcher import get_urls_from_api
 from src.utils.rate_limiter import RateLimiter
-from src.settings import get_scraper_settings
+from src.settings import get_scraper_settings, get_backend_settings, get_source_api_settings, get_db_settings
 
 
 @dataclass
@@ -54,7 +54,7 @@ def _scrape_single_source(entry: dict, logger: logging.Logger) -> ScrapingResult
         )
 
 
-def run_daily_scraping(max_workers: int = None, rate_limit_delay: float = None):
+def run_daily_scraping(max_workers: int = None, rate_limit_delay: float = None, skip_config_check: bool = False):
     """
     Exécute le scraping quotidien avec parallélisation.
 
@@ -64,6 +64,8 @@ def run_daily_scraping(max_workers: int = None, rate_limit_delay: float = None):
     """
     configure_logging()
     logger = logging.getLogger(__name__)
+    if not skip_config_check:
+        check_configuration()
 
     # Configuration depuis settings (validées par Pydantic)
     scraper_settings = get_scraper_settings()
@@ -138,6 +140,48 @@ def run_daily_scraping(max_workers: int = None, rate_limit_delay: float = None):
             message=error_message
         )
 
+
+def check_configuration():
+    """Vérifie que toutes les variables d'environnement critiques sont configurées."""
+    logger = logging.getLogger(__name__)
+
+    backend_settings = get_backend_settings()
+    source_settings = get_source_api_settings()
+    db_settings = get_db_settings()
+
+    errors = []
+
+    # Vérification des URLs
+    if not backend_settings.api_url:
+        errors.append("❌ BACKEND_API_URL est manquant")
+    if not backend_settings.api_key:
+        errors.append("❌ BACKEND_API_KEY est manquant")
+    if not source_settings.api_url:
+        errors.append("❌ API_URL est manquant")
+    if not source_settings.api_key:
+        errors.append("❌ API_KEY est manquant")
+    if not db_settings.is_configured:
+        errors.append("❌ Configuration MySQL incomplète (MYSQL_USER/PASSWORD/DATABASE)")
+
+    # Test de connexion au backend
+    if backend_settings.api_url:
+        try:
+            import requests
+            response = requests.get(
+                f"{backend_settings.api_url.replace('/api/ingest/matches', '/api/test')}",
+                headers={"X-API-KEY": backend_settings.api_key},
+                timeout=5
+            )
+            logger.info(f"✅ Backend accessible (status {response.status_code})")
+        except Exception as e:
+            errors.append(f"❌ Backend inaccessible : {e}")
+
+    if errors:
+        for error in errors:
+            logger.error(error)
+        raise RuntimeError("Configuration invalide, arrêt du scraper.")
+
+    logger.info("✅ Configuration validée, démarrage du scraping...")
 
 if __name__ == "__main__":
     run_daily_scraping()
