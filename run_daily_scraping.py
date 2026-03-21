@@ -54,7 +54,7 @@ def _scrape_single_source(entry: dict, logger: logging.Logger) -> ScrapingResult
         )
 
 
-def run_daily_scraping(max_workers: int = None, rate_limit_delay: float = None):
+def run_daily_scraping(max_workers: int = None, rate_limit_delay: float = None, skip_config_check: bool = False):
     """
     Exécute le scraping quotidien avec parallélisation.
 
@@ -64,7 +64,8 @@ def run_daily_scraping(max_workers: int = None, rate_limit_delay: float = None):
     """
     configure_logging()
     logger = logging.getLogger(__name__)
-    check_configuration()
+    if not skip_config_check:
+        check_configuration()
 
     # Configuration depuis settings (validées par Pydantic)
     scraper_settings = get_scraper_settings()

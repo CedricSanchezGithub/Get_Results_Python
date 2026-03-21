@@ -41,7 +41,7 @@ class TestRunDailyScrapingIntegration:
         mock_send_matches.return_value = True
         mock_send_rankings.return_value = True
 
-        run_daily_scraping(max_workers=1)
+        run_daily_scraping(max_workers=1, skip_config_check = True)
 
         print(f"\n=== DONNÉES ÉQUIPES CAPTURÉES ===")
         if mock_send_teams.call_count > 0:
