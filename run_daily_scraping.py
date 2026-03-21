@@ -1,3 +1,4 @@
+import os
 import time
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -149,6 +150,10 @@ def check_configuration():
     source_settings = get_source_api_settings()
     db_settings = get_db_settings()
 
+    log_settings_keys(backend_settings, "BackendAPISettings", logger)
+    log_settings_keys(source_settings, "SourceAPISettings", logger)
+    log_settings_keys(db_settings, "DatabaseSettings", logger)
+
     errors = []
 
     # Vérification des URLs
@@ -182,6 +187,18 @@ def check_configuration():
         raise RuntimeError("Configuration invalide, arrêt du scraper.")
 
     logger.info("✅ Configuration validée, démarrage du scraping...")
+
+def log_settings_keys(settings_instance, label: str, logger: logging.Logger):
+    prefix = settings_instance.model_config.get("env_prefix", "")
+    alias_map = {
+        field_name: (field_info.validation_alias or f"{prefix}{field_name}").upper()
+        for field_name, field_info in settings_instance.model_fields.items()
+    }
+    logger.info(f"📋 {label} lit les variables :")
+    for field_name, env_key in alias_map.items():
+        present = env_key in os.environ
+        logger.info(f"   - {env_key} → {'✅ présent' if present else '❌ absent'}")
+
 
 if __name__ == "__main__":
     run_daily_scraping()
