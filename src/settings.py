@@ -93,12 +93,12 @@ class SourceAPISettings(BaseSettings):
 
     # Ces champs utilisent les noms exacts des variables d'env (sans préfixe)
     api_url: str = Field(
-        default="http://backend:8081/api/competitions",
         validation_alias="API_URL",
         description="URL de l'API des compétitions",
     )
     api_key: str = Field(
-        default="secret_local_dev", validation_alias="API_KEY", description="Clé API"
+        validation_alias="API_KEY",
+        description="Clé API"
     )
 
 
