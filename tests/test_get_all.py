@@ -9,18 +9,6 @@ from src.scraping.get_all import (
 )
 from src.models.models import MatchIngest, RankingIngest
 
-# Mapping de test réutilisé dans plusieurs tests
-TEAM_MAPPING = {
-    "Club A": 1,
-    "Club B": 2,
-    "Team A": 10,
-    "Team B": 11,
-    "A": 1,
-    "B": 2,
-    "C": 3,
-    "D": 4,
-}
-
 
 class TestExtractPouleId:
     """Tests pour l'extraction de l'ID de poules depuis l'URL."""
@@ -55,12 +43,12 @@ class TestMapToIngestModel:
             "journee": "1",
             "official_phase_name": "Excellence",
         }
-        result = _map_to_ingest_model(raw_match, "-18M", "123456", TEAM_MAPPING)
+        result = _map_to_ingest_model(raw_match, "-18M", "123456")
 
         assert result is not None
         assert isinstance(result, MatchIngest)
-        assert result.team_1_id == 1
-        assert result.team_2_id == 2
+        assert result.team_1_name == "Club A"
+        assert result.team_2_name == "Club B"
         assert result.team_1_score == 25
         assert result.category == "-18M"
         assert result.pool_id == "123456"
@@ -75,7 +63,7 @@ class TestMapToIngestModel:
             "team_2_name": "Club B",
             "team_2_score": None,
         }
-        result = _map_to_ingest_model(raw_match, "-18M", "123456", TEAM_MAPPING)
+        result = _map_to_ingest_model(raw_match, "-18M", "123456")
 
         assert result is not None
         assert result.team_1_score is None
@@ -83,22 +71,22 @@ class TestMapToIngestModel:
         assert result.round is None
         assert result.official_phase_name is None
 
-    def test_map_match_unknown_team_returns_null_id(self):
-        """Une équipe inconnue dans le mapping doit produire team_id=None (pas lever d'erreur)."""
+    def test_map_match_unknown_team_uses_name_directly(self):
+        """Les noms d'équipes sont utilisés directement, pas de résolution par ID."""
         raw_match = {
             "match_date": "2025-01-15 14:30:00",
             "team_1_name": "Équipe Inconnue",
             "team_2_name": "Club B",
         }
-        result = _map_to_ingest_model(raw_match, "-18M", "123456", TEAM_MAPPING)
+        result = _map_to_ingest_model(raw_match, "-18M", "123456")
 
         assert result is not None
-        assert result.team_1_id is None
-        assert result.team_2_id == 2
+        assert result.team_1_name == "Équipe Inconnue"
+        assert result.team_2_name == "Club B"
 
     def test_map_match_with_invalid_date(self):
         raw_match = {"match_date": "invalid-date", "team_1_name": "Club A", "team_2_name": "Club B"}
-        result = _map_to_ingest_model(raw_match, "-18M", "123456", TEAM_MAPPING)
+        result = _map_to_ingest_model(raw_match, "-18M", "123456")
 
         assert result is None
 
@@ -107,7 +95,7 @@ class TestMapToIngestModel:
             "team_1_name": "Club A"
             # match_date manquant
         }
-        result = _map_to_ingest_model(raw_match, "-18M", "123456", TEAM_MAPPING)
+        result = _map_to_ingest_model(raw_match, "-18M", "123456")
 
         assert result is None
 
@@ -124,56 +112,54 @@ class TestMapToRankingModel:
             "won": 8,
             "draws": 1,
             "lost": 1,
-            "goals_for": 250,
-            "goals_against": 200,
             "goal_diff": 50,
         }
-        result = _map_to_ranking_model(raw_ranking, "-18M", "123456", TEAM_MAPPING)
+        result = _map_to_ranking_model(raw_ranking, "-18M", "123456")
 
         assert result is not None
         assert isinstance(result, RankingIngest)
-        assert result.team_id == 10
-        assert result.rank == 1
+        assert result.team_name == "Team A"
+        assert result.rank_number == 1
         assert result.points == 25
         assert result.category == "-18M"
         assert result.pool_id == "123456"
 
     def test_map_ranking_with_missing_optional_fields(self):
         raw_ranking = {"team_name": "Team B"}
-        result = _map_to_ranking_model(raw_ranking, "-18M", "123456", TEAM_MAPPING)
+        result = _map_to_ranking_model(raw_ranking, "-18M", "123456")
 
         assert result is not None
-        assert result.rank == 0
+        assert result.rank_number == 0
         assert result.points == 0
         assert result.matches_played == 0
 
     def test_map_ranking_with_official_phase_name(self):
         raw_ranking = {"team_name": "Team A", "rank": 1, "official_phase_name": "Division 1"}
-        result = _map_to_ranking_model(raw_ranking, "-18M", "123456", TEAM_MAPPING, "Excellence")
+        result = _map_to_ranking_model(raw_ranking, "-18M", "123456", "Excellence")
 
         assert result is not None
         assert result.official_phase_name == "Excellence"
 
-    def test_map_ranking_unknown_team_returns_null_id(self):
-        """Une équipe inconnue dans le mapping doit produire team_id=None."""
+    def test_map_ranking_unknown_team_uses_name_directly(self):
+        """Le nom d'équipe est utilisé directement."""
         raw_ranking = {
             "team_name": "Équipe Inconnue",
             "rank": 1,
         }
-        result = _map_to_ranking_model(raw_ranking, "-18M", "123456", TEAM_MAPPING)
+        result = _map_to_ranking_model(raw_ranking, "-18M", "123456")
 
         assert result is not None
-        assert result.team_id is None
+        assert result.team_name == "Équipe Inconnue"
 
-    def test_map_ranking_with_missing_required_field(self):
+    def test_map_ranking_with_missing_team_name(self):
         raw_ranking = {
             "rank": 1
-            # team_name manquant → team_id sera None, ce qui est autorisé
+            # team_name manquant → chaîne vide
         }
-        result = _map_to_ranking_model(raw_ranking, "-18M", "123456", TEAM_MAPPING)
+        result = _map_to_ranking_model(raw_ranking, "-18M", "123456")
 
         assert result is not None
-        assert result.team_id is None
+        assert result.team_name == ""
 
 
 class TestBuildPaginationUrls:
@@ -247,13 +233,11 @@ class TestGetAll:
             ],
             [],
         )
-        mock_ingest_client.send_teams.return_value = {"Team A": 1, "A": 2, "B": 3, "C": 4, "D": 5}
         mock_ingest_client.send_matches.return_value = True
         mock_ingest_client.send_rankings.return_value = True
 
         get_all("http://test.com/poule-123/journee-1/", "-18M")
 
-        assert mock_ingest_client.send_teams.call_count == 1
         assert mock_ingest_client.send_matches.call_count == 1
         assert mock_ingest_client.send_rankings.call_count == 1
 
@@ -267,7 +251,6 @@ class TestGetAll:
         mock_fetch_initial.return_value = ([], [], [])
         mock_build_urls.return_value = []
         mock_fetch_paginated.return_value = ([], [])
-        mock_ingest_client.send_teams.return_value = {}
 
         get_all("http://test.com/poule-123/journee-1/", "-18M")
 
@@ -296,12 +279,10 @@ class TestGetAll:
         )
         mock_build_urls.return_value = []
         mock_fetch_paginated.return_value = ([], [])
-        mock_ingest_client.send_teams.return_value = {"Team A": 1, "A": 2, "B": 3}
         mock_ingest_client.send_matches.return_value = False
         mock_ingest_client.send_rankings.return_value = True
 
         get_all("http://test.com/poule-123/journee-1/", "-18M")
 
-        assert mock_ingest_client.send_teams.call_count == 1
         assert mock_ingest_client.send_matches.call_count == 1
         assert mock_ingest_client.send_rankings.call_count == 1

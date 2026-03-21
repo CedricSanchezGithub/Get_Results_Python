@@ -12,10 +12,9 @@ def ingest_client():
     """Client d'ingestion avec configuration de test."""
     get_settings.cache_clear()
 
-    with patch.dict("os.environ", {
-        "BACKEND_API_URL": "http://test-api/ingest",
-        "BACKEND_API_KEY": "test-key"
-    }):
+    with patch.dict(
+        "os.environ", {"BACKEND_API_URL": "http://test-api/ingest", "BACKEND_API_KEY": "test-key"}
+    ):
         return IngestClient(max_retries=3, base_delay=0.01)  # Délai court pour les tests
 
 
@@ -30,7 +29,7 @@ def sample_matches():
             team_2_name="Club B",
             team_2_score=22,
             category="-18M",
-            pool_id="169284"
+            pool_id="169284",
         )
     ]
 
@@ -46,11 +45,9 @@ class TestIngestClientInit:
     def test_init_without_api_key(self):
         """Vérifie le warning quand api_key est absente."""
         from src.settings import BackendAPISettings
+
         with patch("src.saving.api_client.get_backend_settings") as mock_settings:
-            mock_settings.return_value = BackendAPISettings(
-                api_url="http://test",
-                api_key=None
-            )
+            mock_settings.return_value = BackendAPISettings(api_url="http://test", api_key=None)
             client = IngestClient()
             assert client.api_key is None
 
@@ -62,7 +59,7 @@ class TestIngestClientSendMatches:
         assert ingest_client.send_matches([]) is True
 
     def test_send_success(self, ingest_client, sample_matches):
-        with patch.object(ingest_client.session, 'post') as mock_post:
+        with patch.object(ingest_client.session, "post") as mock_post:
             mock_post.return_value = MagicMock(status_code=200)
 
             result = ingest_client.send_matches(sample_matches)
@@ -71,7 +68,7 @@ class TestIngestClientSendMatches:
             mock_post.assert_called_once()
 
     def test_send_201_created(self, ingest_client, sample_matches):
-        with patch.object(ingest_client.session, 'post') as mock_post:
+        with patch.object(ingest_client.session, "post") as mock_post:
             mock_post.return_value = MagicMock(status_code=201)
 
             result = ingest_client.send_matches(sample_matches)
@@ -83,7 +80,7 @@ class TestIngestClientRetry:
     """Tests du mécanisme de retry."""
 
     def test_no_retry_on_403(self, ingest_client, sample_matches):
-        with patch.object(ingest_client.session, 'post') as mock_post:
+        with patch.object(ingest_client.session, "post") as mock_post:
             mock_post.return_value = MagicMock(status_code=403, text="Forbidden")
 
             result = ingest_client.send_matches(sample_matches)
@@ -92,7 +89,7 @@ class TestIngestClientRetry:
             assert mock_post.call_count == 1  # Pas de retry sur 403
 
     def test_no_retry_on_400(self, ingest_client, sample_matches):
-        with patch.object(ingest_client.session, 'post') as mock_post:
+        with patch.object(ingest_client.session, "post") as mock_post:
             mock_post.return_value = MagicMock(status_code=400, text="Bad Request")
 
             result = ingest_client.send_matches(sample_matches)
@@ -101,7 +98,7 @@ class TestIngestClientRetry:
             assert mock_post.call_count == 1
 
     def test_retry_on_500(self, ingest_client, sample_matches):
-        with patch.object(ingest_client.session, 'post') as mock_post:
+        with patch.object(ingest_client.session, "post") as mock_post:
             mock_post.return_value = MagicMock(status_code=500, text="Server Error")
 
             result = ingest_client.send_matches(sample_matches)
@@ -112,7 +109,7 @@ class TestIngestClientRetry:
     def test_retry_on_network_error(self, ingest_client, sample_matches):
         import requests
 
-        with patch.object(ingest_client.session, 'post') as mock_post:
+        with patch.object(ingest_client.session, "post") as mock_post:
             mock_post.side_effect = requests.exceptions.ConnectionError("Network error")
 
             result = ingest_client.send_matches(sample_matches)
@@ -121,11 +118,11 @@ class TestIngestClientRetry:
             assert mock_post.call_count == 3
 
     def test_retry_then_success(self, ingest_client, sample_matches):
-        with patch.object(ingest_client.session, 'post') as mock_post:
+        with patch.object(ingest_client.session, "post") as mock_post:
             # Échec puis succès
             mock_post.side_effect = [
                 MagicMock(status_code=500, text="Error"),
-                MagicMock(status_code=200)
+                MagicMock(status_code=200),
             ]
 
             result = ingest_client.send_matches(sample_matches)
@@ -140,8 +137,10 @@ class TestIngestClientRetry:
         def capture_delay(seconds):
             delays.append(seconds)
 
-        with patch.object(ingest_client.session, 'post') as mock_post, \
-             patch('src.saving.api_client.time.sleep', side_effect=capture_delay):
+        with (
+            patch.object(ingest_client.session, "post") as mock_post,
+            patch("src.saving.api_client.time.sleep", side_effect=capture_delay),
+        ):
             mock_post.return_value = MagicMock(status_code=500, text="Error")
             ingest_client.send_matches(sample_matches)
 
@@ -159,17 +158,18 @@ class TestIngestClientSendRankings:
     def sample_rankings(self):
         """Liste de classements pour les tests."""
         from src.models.models import RankingIngest
+
         return [
             RankingIngest(
                 category="-18M",
                 pool_id="169284",
                 team_name="Club A",
-                rank=1,
+                rank_number=1,
                 points=15,
                 matches_played=5,
                 won=5,
                 draws=0,
-                lost=0
+                lost=0,
             )
         ]
 
@@ -177,7 +177,7 @@ class TestIngestClientSendRankings:
         assert ingest_client.send_rankings([]) is True
 
     def test_send_rankings_success(self, ingest_client, sample_rankings):
-        with patch.object(ingest_client.session, 'post') as mock_post:
+        with patch.object(ingest_client.session, "post") as mock_post:
             mock_post.return_value = MagicMock(status_code=200)
 
             result = ingest_client.send_rankings(sample_rankings)
@@ -188,12 +188,13 @@ class TestIngestClientSendRankings:
     def test_send_rankings_no_url(self, sample_rankings):
         """Retourne False si aucune URL de rankings configurée."""
         from src.settings import BackendAPISettings, ScraperSettings
-        with patch("src.saving.api_client.get_backend_settings") as mock_backend, \
-             patch("src.saving.api_client.get_scraper_settings") as mock_scraper:
+
+        with (
+            patch("src.saving.api_client.get_backend_settings") as mock_backend,
+            patch("src.saving.api_client.get_scraper_settings") as mock_scraper,
+        ):
             mock_backend.return_value = BackendAPISettings(
-                api_url=None,
-                rankings_api_url=None,
-                api_key="test"
+                api_url=None, rankings_api_url=None, api_key="test"
             )
             mock_scraper.return_value = ScraperSettings()
             client = IngestClient()

@@ -54,11 +54,8 @@ class BackendAPISettings(BaseSettings):
         default=None, description="URL de l'endpoint d'ingestion des classements"
     )
     api_key: Optional[str] = Field(default=None, description="Clé API pour l'authentification")
-    teams_api_url: Optional[str] = Field(
-        default=None, description="URL de l'endpoint d'ingestion des équipes"
-    )
 
-    @field_validator("api_url", "rankings_api_url", "teams_api_url")
+    @field_validator("api_url", "rankings_api_url")
     @classmethod
     def validate_url(cls, v: Optional[str]) -> Optional[str]:
         if v and not v.startswith(("http://", "https://")):
@@ -71,18 +68,7 @@ class BackendAPISettings(BaseSettings):
         if self.rankings_api_url:
             return self.rankings_api_url
         if self.api_url:
-            # Dérive /api/ingest/rankings depuis /api/ingest/matches
             return self.api_url.replace("/matches", "/rankings")
-        return None
-
-    @property
-    def effective_teams_url(self) -> Optional[str]:
-        """Retourne l'URL des équipes, dérivée de api_url si non spécifiée."""
-        if self.teams_api_url:
-            return self.teams_api_url
-        if self.api_url:
-            # Dérive /api/ingest/teams depuis /api/ingest/matches
-            return self.api_url.replace("/matches", "/teams")
         return None
 
 
@@ -96,10 +82,7 @@ class SourceAPISettings(BaseSettings):
         validation_alias="API_URL",
         description="URL de l'API des compétitions",
     )
-    api_key: str = Field(
-        validation_alias="API_KEY",
-        description="Clé API"
-    )
+    api_key: str = Field(validation_alias="API_KEY", description="Clé API")
 
 
 class ScraperSettings(BaseSettings):

@@ -2,9 +2,9 @@ import logging
 import random
 import time
 import requests
-from typing import List, Dict
+from typing import List
 
-from src.models.models import MatchIngest, RankingIngest, TeamIngest
+from src.models.models import MatchIngest, RankingIngest
 from src.settings import get_backend_settings, get_scraper_settings
 
 logger = logging.getLogger(__name__)
@@ -13,7 +13,6 @@ logger = logging.getLogger(__name__)
 class IngestClient:
     """Client HTTP pour l'ingestion des données vers le backend."""
 
-    # Codes HTTP pour lesquels on ne retry pas (erreurs client)
     NON_RETRYABLE_STATUS_CODES = {400, 401, 403, 404, 422}
 
     def __init__(self, max_retries: int = 3, base_delay: float = 1.0):
@@ -27,7 +26,6 @@ class IngestClient:
 
         self.api_url = backend_settings.api_url
         self.rankings_api_url = backend_settings.effective_rankings_url
-        self.teams_api_url = backend_settings.effective_teams_url
         self.api_key = backend_settings.api_key
         self.max_retries = max_retries
         self.base_delay = base_delay
@@ -79,7 +77,6 @@ class IngestClient:
 
                 last_response = response
 
-                # Erreur non-retryable : on abandonne immédiatement
                 if response.status_code in self.NON_RETRYABLE_STATUS_CODES:
                     if response.status_code == 403:
                         logger.error("⛔ Accès refusé (403). Vérifiez BACKEND_API_KEY.")
@@ -87,20 +84,17 @@ class IngestClient:
                         logger.error(f"❌ Erreur Backend ({response.status_code}): {response.text}")
                     return False
 
-                # Erreur retryable (5xx) : on continue
                 logger.warning(f"⚠️ Erreur serveur ({response.status_code}), retry possible...")
 
             except requests.exceptions.RequestException as e:
                 last_exception = e
                 logger.warning(f"⚠️ Erreur réseau : {e}")
 
-            # Backoff exponentiel + jitter avant le prochain retry
             if attempt < self.max_retries:
                 delay = self.base_delay * (2 ** (attempt - 1)) + random.uniform(0, 0.5)
                 logger.info(f"⏳ Attente de {delay:.1f}s avant retry...")
                 time.sleep(delay)
 
-        # Toutes les tentatives ont échoué
         if last_exception:
             logger.error(
                 f"🔥 Échec définitif après {self.max_retries} tentatives. Dernière erreur : {last_exception}"
@@ -139,53 +133,3 @@ class IngestClient:
 
         payload = [r.model_dump(mode="json") for r in rankings]
         return self._send_batch(self.rankings_api_url, payload, "classements")
-
-    def send_teams(self, teams: List[TeamIngest]) -> Dict[str, int]:
-        """
-        Envoie un batch d'équipes au backend (upsert).
-        Retourne le mapping { team_name: team_id } retourné par le backend.
-        Retourne un dict vide en cas d'échec.
-        """
-        if not teams:
-            return {}
-
-        if not self.teams_api_url:
-            logger.warning(
-                "⚠️ Aucune URL d'équipes configurée (BACKEND_TEAMS_API_URL). Envoi ignoré."
-            )
-            return {}
-
-        payload = [t.model_dump(mode="json") for t in teams]
-
-        for attempt in range(1, self.max_retries + 1):
-            try:
-                logger.info(
-                    f"📤 Envoi de {len(payload)} équipes vers {self.teams_api_url} (tentative {attempt}/{self.max_retries})..."
-                )
-                response = self.session.post(self.teams_api_url, json=payload, timeout=self.timeout)
-
-                if response.status_code in (200, 201):
-                    mapping: Dict[str, int] = response.json()
-                    logger.info(f"✅ Ingestion équipes réussie. {len(mapping)} équipes indexées.")
-                    return mapping
-
-                if response.status_code in self.NON_RETRYABLE_STATUS_CODES:
-                    logger.error(
-                        f"❌ Erreur Backend équipes ({response.status_code}): {response.text}"
-                    )
-                    return {}
-
-                logger.warning(
-                    f"⚠️ Erreur serveur équipes ({response.status_code}), retry possible..."
-                )
-
-            except requests.exceptions.RequestException as e:
-                logger.warning(f"⚠️ Erreur réseau équipes : {e}")
-
-            if attempt < self.max_retries:
-                delay = self.base_delay * (2 ** (attempt - 1)) + random.uniform(0, 0.5)
-                logger.info(f"⏳ Attente de {delay:.1f}s avant retry...")
-                time.sleep(delay)
-
-        logger.error(f"🔥 Échec définitif envoi équipes après {self.max_retries} tentatives.")
-        return {}

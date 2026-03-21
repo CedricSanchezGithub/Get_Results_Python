@@ -9,14 +9,14 @@ class TestMatchIngestValidation:
 
     def test_valid_complete_match(self, sample_match_data):
         match = MatchIngest(**sample_match_data)
-        assert match.team_1_id == 1
+        assert match.team_1_name == "Club A"
         assert match.team_1_score == 25
         assert match.official_phase_name == "Excellence"
 
     def test_valid_minimal_match(self, sample_match_data_minimal):
         match = MatchIngest(**sample_match_data_minimal)
-        assert match.team_1_id is None
-        assert match.team_2_id is None
+        assert match.team_1_name == "Club A"
+        assert match.team_2_name == "Club B"
         assert match.team_1_score is None
         assert match.team_2_score is None
         assert match.official_phase_name is None
@@ -25,8 +25,8 @@ class TestMatchIngestValidation:
         with pytest.raises(ValidationError):
             MatchIngest(
                 # match_date manquant
-                team_1_id=1,
-                team_2_id=2,
+                team_1_name="Club A",
+                team_2_name="Club B",
                 category="-18M",
                 pool_id="123",
             )
@@ -35,8 +35,8 @@ class TestMatchIngestValidation:
         with pytest.raises(ValidationError):
             MatchIngest(
                 match_date=datetime.now(timezone.utc),
-                team_1_id=1,
-                team_2_id=2,
+                team_1_name="Club A",
+                team_2_name="Club B",
                 pool_id="123",
                 # category manquant
             )
@@ -50,7 +50,7 @@ class TestMatchIngestSerialization:
         dumped = match.model_dump(mode="json")
 
         assert isinstance(dumped, dict)
-        assert dumped["team_1_id"] == 1
+        assert dumped["team_1_name"] == "Club A"
         assert dumped["team_1_score"] == 25
         assert "match_date" in dumped
 
