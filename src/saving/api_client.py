@@ -71,7 +71,7 @@ class IngestClient:
                 )
                 response = self.session.post(url, json=payload, timeout=self.timeout)
 
-                if response.status_code in (200, 201):
+                if response.status_code in (200, 201, 204):
                     logger.info(f"✅ Ingestion {item_type} réussie.")
                     return True
 
